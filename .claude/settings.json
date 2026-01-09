@@ -1,0 +1,9 @@
+{
+  "sandbox": {
+    "enabled": true
+  },
+  "permissions": {
+    "defaultMode": "dontAsk"
+  },
+  "model": "opus"
+}
