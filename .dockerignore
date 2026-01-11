@@ -6,4 +6,6 @@ Dockerfile
 README.md
 .claude/*
 !.claude/settings.json
-/.env
+!.claude/hooks
+.env
+.env.example
