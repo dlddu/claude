@@ -7,13 +7,12 @@ metadata:
     component: cronjob
 spec:
   schedule: "*/10 * * * *"  # Every 10 minutes
-  concurrencyPolicy: Forbid  # Prevent concurrent runs
+  concurrencyPolicy: Allow
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
-      backoffLimit: 0  # Don't retry failed jobs
-      activeDeadlineSeconds: 540  # 9 minute timeout (less than cron interval)
+      backoffLimit: 0
       template:
         metadata:
           labels:
@@ -64,10 +63,3 @@ spec:
                       name: agent-supervisor-secrets
                       key: AWS_DYNAMODB_TABLE_NAME
                       optional: true
-              resources:
-                requests:
-                  memory: "256Mi"
-                  cpu: "100m"
-                limits:
-                  memory: "1Gi"
-                  cpu: "500m"
