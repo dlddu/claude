@@ -23,7 +23,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: agent-supervisor
-              image: ghcr.io/your-org/claude:latest  # Update with your image
+              image: ghcr.io/dlddu/claude:latest
               imagePullPolicy: Always
               command:
                 - /bin/bash
@@ -71,22 +71,3 @@ spec:
                 limits:
                   memory: "1Gi"
                   cpu: "500m"
-          imagePullSecrets:
-            - name: ghcr-secret  # Update with your image pull secret
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: agent-supervisor-secrets
-  labels:
-    app: agent-supervisor
-type: Opaque
-stringData:
-  # Replace with your actual credentials
-  LINEAR_API_KEY: "<YOUR_LINEAR_API_KEY>"
-  CLAUDE_CODE_OAUTH_TOKEN: "<YOUR_CLAUDE_CODE_OAUTH_TOKEN>"
-  # Optional AWS credentials (uncomment if needed)
-  # AWS_ACCESS_KEY_ID: "<YOUR_AWS_ACCESS_KEY_ID>"
-  # AWS_SECRET_ACCESS_KEY: "<YOUR_AWS_SECRET_ACCESS_KEY>"
-  # AWS_REGION: "us-east-1"
-  # AWS_DYNAMODB_TABLE_NAME: "<YOUR_TABLE_NAME>"
