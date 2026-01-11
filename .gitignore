@@ -1,4 +1,5 @@
 /.claude/*
 !/.claude/settings.json
-/.env
+!/.claude/commands
 !/.claude/hooks
+/.env
