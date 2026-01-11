@@ -6,3 +6,4 @@ Dockerfile
 README.md
 .claude/*
 !.claude/settings.json
+/.env
