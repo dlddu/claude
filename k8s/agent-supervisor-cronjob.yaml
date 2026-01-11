@@ -1,0 +1,92 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: agent-supervisor
+  labels:
+    app: agent-supervisor
+    component: cronjob
+spec:
+  schedule: "*/10 * * * *"  # Every 10 minutes
+  concurrencyPolicy: Forbid  # Prevent concurrent runs
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0  # Don't retry failed jobs
+      activeDeadlineSeconds: 540  # 9 minute timeout (less than cron interval)
+      template:
+        metadata:
+          labels:
+            app: agent-supervisor
+            component: job
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: agent-supervisor
+              image: ghcr.io/your-org/claude:latest  # Update with your image
+              imagePullPolicy: Always
+              command:
+                - /bin/bash
+                - -c
+                - /app/.claude/scripts/agent-supervisor.sh
+              env:
+                - name: LINEAR_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: agent-supervisor-secrets
+                      key: LINEAR_API_KEY
+                - name: CLAUDE_CODE_OAUTH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: agent-supervisor-secrets
+                      key: CLAUDE_CODE_OAUTH_TOKEN
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: agent-supervisor-secrets
+                      key: AWS_ACCESS_KEY_ID
+                      optional: true
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: agent-supervisor-secrets
+                      key: AWS_SECRET_ACCESS_KEY
+                      optional: true
+                - name: AWS_REGION
+                  valueFrom:
+                    secretKeyRef:
+                      name: agent-supervisor-secrets
+                      key: AWS_REGION
+                      optional: true
+                - name: AWS_DYNAMODB_TABLE_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: agent-supervisor-secrets
+                      key: AWS_DYNAMODB_TABLE_NAME
+                      optional: true
+              resources:
+                requests:
+                  memory: "256Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "1Gi"
+                  cpu: "500m"
+          imagePullSecrets:
+            - name: ghcr-secret  # Update with your image pull secret
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: agent-supervisor-secrets
+  labels:
+    app: agent-supervisor
+type: Opaque
+stringData:
+  # Replace with your actual credentials
+  LINEAR_API_KEY: "<YOUR_LINEAR_API_KEY>"
+  CLAUDE_CODE_OAUTH_TOKEN: "<YOUR_CLAUDE_CODE_OAUTH_TOKEN>"
+  # Optional AWS credentials (uncomment if needed)
+  # AWS_ACCESS_KEY_ID: "<YOUR_AWS_ACCESS_KEY_ID>"
+  # AWS_SECRET_ACCESS_KEY: "<YOUR_AWS_SECRET_ACCESS_KEY>"
+  # AWS_REGION: "us-east-1"
+  # AWS_DYNAMODB_TABLE_NAME: "<YOUR_TABLE_NAME>"
