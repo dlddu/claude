@@ -4,3 +4,5 @@ Dockerfile
 .dockerignore
 .gitignore
 README.md
+.claude/*
+!.claude/settings.json
