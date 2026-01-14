@@ -1,7 +1,7 @@
 ---
 name: linear-transcript
 description: Linear 이슈의 세션 transcript에서 도구 사용 내역(성공/실패)을 분석합니다
-allowed-tools: mcp__linear-server__*, Bash(.claude/skills/linear-transcript/scripts/analyze-transcript.sh:*), Bash(aws sts get-caller-identity:*)
+allowed-tools: mcp__linear-server__get_issue, mcp__linear-server__list_comments, Bash(.claude/skills/linear-transcript/scripts/analyze-transcript.sh:*), Bash(aws sts get-caller-identity:*)
 ---
 
 # Linear Transcript Analyzer
