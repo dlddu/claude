@@ -2,5 +2,18 @@
   "permissions": {
     "defaultMode": "dontAsk"
   },
-  "model": "opus"
+  "model": "opus",
+  "hooks": {
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-end.sh"
+          }
+        ]
+      }
+    ]
+  }
 }
