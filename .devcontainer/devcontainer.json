@@ -16,7 +16,8 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"anthropic.claude-code"
+				"anthropic.claude-code",
+				"github.vscode-github-actions"
 			]
 		}
 	},
@@ -31,6 +32,11 @@
 			"source": "dlddu-claude-dind",
 			"target": "/var/lib/docker",
 			"type": "volume"
+		},
+		{
+			"source": "${localEnv:HOME}/.config/gh",
+			"target": "/home/vscode/.config/gh",
+			"type": "bind"
 		}
 	],
 	"containerEnv": {
