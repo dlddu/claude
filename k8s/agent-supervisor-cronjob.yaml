@@ -13,6 +13,7 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
+      activeDeadlineSeconds: 1200  # Force terminate after 20 minutes
       backoffLimit: 0
       template:
         metadata:
@@ -32,9 +33,9 @@ spec:
               resources:
                 requests:
                   cpu: "100m"
-                  memory: "256Mi"
+                  memory: "512Mi"
                 limits:
-                  memory: "256Mi"
+                  memory: "512Mi"
               env:
                 - name: LINEAR_API_KEY
                   valueFrom:
