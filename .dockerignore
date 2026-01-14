@@ -1,5 +1,6 @@
 .git
 .devcontainer
+.github
 Dockerfile
 .dockerignore
 .gitignore
@@ -9,3 +10,4 @@ README.md
 .env
 .env.example
 !.claude/hooks
+!.claude/skills

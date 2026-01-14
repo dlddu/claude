@@ -2,3 +2,4 @@
 !.claude/settings.json
 .env
 !.claude/hooks
+!.claude/skills
