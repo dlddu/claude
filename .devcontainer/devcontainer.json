@@ -25,7 +25,9 @@
 	// "remoteUser": "root"
 	"runArgs": [
 		"--name",
-		"dlddu-claude"
+		"dlddu-claude",
+		"--env-file",
+		".env"
 	],
 	"mounts": [
 		{
