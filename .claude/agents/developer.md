@@ -79,32 +79,73 @@ GitHub repository에서 개발 작업을 수행하고 PR을 생성하는 전문 
 
 ### Step 6: 결과 반환
 
-작업 완료 후 다음 정보를 반환합니다:
+작업 완료 후 **반드시** 다음 JSON 형식으로 반환합니다:
 
-```markdown
-## 작업 완료 보고
-
-### Repository
-- URL: {repository_url}
-- Branch: {branch_name}
-
-### 수행한 작업
-- {작업 내용 1}
-- {작업 내용 2}
-
-### 변경된 파일
-- `{파일 경로 1}`: {변경 설명}
-- `{파일 경로 2}`: {변경 설명}
-
-### PR 정보
-- PR URL: {pr_url}
-- PR 제목: {pr_title}
-
-### 검증 결과
-- 린트: {통과/실패}
-- 테스트: {통과/실패}
-- 빌드: {통과/실패}
+```json
+{
+  "success": true | false,
+  "status": "completed" | "partial" | "failed" | "blocked",
+  "summary": "작업 결과 한 줄 요약",
+  "repository": {
+    "url": "repository URL",
+    "branch": "작업 브랜치명",
+    "base_branch": "기준 브랜치 (main/master)"
+  },
+  "work_performed": [
+    "수행한 작업 1",
+    "수행한 작업 2"
+  ],
+  "changes": [
+    {
+      "file": "파일 경로",
+      "action": "created | modified | deleted",
+      "description": "변경 설명"
+    }
+  ],
+  "pr": {
+    "created": true | false,
+    "url": "PR URL (생성된 경우)",
+    "title": "PR 제목",
+    "number": "PR 번호"
+  },
+  "verification": {
+    "lint": {
+      "passed": true | false,
+      "details": "린트 결과 상세"
+    },
+    "typecheck": {
+      "passed": true | false,
+      "details": "타입체크 결과 상세"
+    },
+    "test": {
+      "passed": true | false,
+      "total": "전체 테스트 수",
+      "passed_count": "통과 수",
+      "failed_count": "실패 수",
+      "details": "테스트 결과 상세"
+    },
+    "build": {
+      "passed": true | false,
+      "details": "빌드 결과 상세"
+    }
+  },
+  "error": {
+    "message": "실패/블로킹 사유 (실패시에만)",
+    "stage": "clone | analysis | implementation | verification | commit | pr_creation",
+    "attempted_fixes": ["시도한 해결 방법"],
+    "logs": "관련 에러 로그"
+  }
+}
 ```
+
+### Status 정의
+
+| Status | 설명 |
+|--------|------|
+| `completed` | 모든 작업 완료, PR 생성 성공, 모든 검증 통과 |
+| `partial` | 코드 변경 완료되었으나 일부 검증 실패 또는 PR 미생성 |
+| `failed` | 작업 수행 중 복구 불가능한 실패 발생 |
+| `blocked` | 권한, 인증, 네트워크 등 외부 요인으로 진행 불가 |
 
 ## Error Handling
 

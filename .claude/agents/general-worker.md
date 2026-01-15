@@ -69,28 +69,43 @@ model: sonnet
 
 ## Output Format
 
-작업 완료 후 다음 형식으로 반환합니다:
+작업 완료 후 **반드시** 다음 JSON 형식으로 반환합니다:
 
-```markdown
-## 작업 완료 보고
-
-### 작업 유형
-{문서 작성 / 리서치 / 분석 / 기타}
-
-### 수행한 작업
-- {작업 내용 1}
-- {작업 내용 2}
-
-### 산출물
-- {산출물 1}: {설명}
-- {산출물 2}: {설명}
-
-### 주요 발견/결론
-{작업 결과 요약}
-
-### 추가 권장 사항
-{있는 경우}
+```json
+{
+  "success": true | false,
+  "status": "completed" | "partial" | "failed" | "blocked",
+  "task_type": "문서 작성 | 리서치 | 분석 | 데이터 작업 | 기타",
+  "summary": "작업 결과 한 줄 요약",
+  "work_performed": [
+    "수행한 작업 1",
+    "수행한 작업 2"
+  ],
+  "outputs": [
+    {
+      "type": "file | report | analysis | data",
+      "path": "파일 경로 (해당시)",
+      "description": "산출물 설명"
+    }
+  ],
+  "findings": "주요 발견/결론",
+  "recommendations": ["추가 권장 사항 (있는 경우)"],
+  "error": {
+    "message": "실패/블로킹 사유 (실패시에만)",
+    "stage": "실패한 단계",
+    "attempted_fixes": ["시도한 해결 방법"]
+  }
+}
 ```
+
+### Status 정의
+
+| Status | 설명 |
+|--------|------|
+| `completed` | 모든 작업이 성공적으로 완료됨 |
+| `partial` | 일부 작업은 완료되었으나 전체 완료는 아님 |
+| `failed` | 작업 수행 중 실패 |
+| `blocked` | 외부 요인으로 진행 불가 |
 
 ## Important Notes
 
