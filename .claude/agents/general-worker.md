@@ -69,7 +69,7 @@ model: sonnet
 
 ## Output Format
 
-작업 완료 후 **반드시** 다음 JSON 형식으로 반환합니다:
+작업 완료 후 다음 JSON 형식으로 반환합니다:
 
 ```json
 {

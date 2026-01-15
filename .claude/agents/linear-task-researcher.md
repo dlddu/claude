@@ -26,12 +26,12 @@ Linear 이슈 정보를 수집하고 작업 수행에 필요한 배경지식을 
    - 우선순위 (priority)
    - 라벨 (labels)
    - 담당자 (assignee)
-   - **프로젝트 (project) 정보**
+   - 프로젝트 (project) 정보
    - 부모 이슈 (parent issue) 정보
    - 하위 이슈 (sub-issues) 목록
    - 첨부된 코멘트
 
-2. **프로젝트가 있는 경우** 프로젝트 상세 정보도 수집합니다:
+2. 프로젝트가 있는 경우 프로젝트 상세 정보도 수집합니다:
    - `mcp__linear-server__get_project` 사용
    - 프로젝트 목표 및 설명
    - 프로젝트 진행 상태
