@@ -71,3 +71,9 @@ spec:
                       name: agent-supervisor-secrets
                       key: AWS_DYNAMODB_TABLE_NAME
                       optional: true
+                - name: GH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: agent-supervisor-secrets
+                      key: GH_TOKEN
+                      optional: true
