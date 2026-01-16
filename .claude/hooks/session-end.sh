@@ -26,16 +26,31 @@ fi
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 DATE_BUCKET="${TIMESTAMP:0:10}"
 
+# Subagent 디렉토리 경로 도출
+SESSION_DIR="${TRANSCRIPT_FILE%.jsonl}"
+SUBAGENTS_DIR="$SESSION_DIR/subagents"
+
 # 임시 파일 생성 (스크립트 종료 시 삭제)
 ITEM_FILE=$(mktemp)
-trap "rm -f $ITEM_FILE" EXIT
+COMBINED_FILE=$(mktemp)
+trap "rm -f $ITEM_FILE $COMBINED_FILE" EXIT
+
+# Main transcript 복사
+cat "$TRANSCRIPT_FILE" > "$COMBINED_FILE"
+
+# Subagent transcripts 이어 붙이기
+if [[ -d "$SUBAGENTS_DIR" ]]; then
+    for subagent_file in "$SUBAGENTS_DIR"/agent-*.jsonl; do
+        [[ -f "$subagent_file" ]] && cat "$subagent_file" >> "$COMBINED_FILE"
+    done
+fi
 
 # DynamoDB item JSON 생성
 jq -n \
     --arg session_id "$SESSION_ID" \
     --arg timestamp "$TIMESTAMP" \
     --arg date_bucket "$DATE_BUCKET" \
-    --rawfile transcript "$TRANSCRIPT_FILE" \
+    --rawfile transcript "$COMBINED_FILE" \
     '{
         "session_id": {"S": $session_id},
         "timestamp": {"S": $timestamp},
