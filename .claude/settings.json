@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "mcp__linear-server__*",
-      "Bash(echo $CLAUDE_SESSION_ID)"
+      "Bash(echo $CLAUDE_SESSION_ID)",
+      "WebSearch"
     ],
     "defaultMode": "dontAsk"
   },
