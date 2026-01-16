@@ -7,6 +7,8 @@ RUN apt-get update && apt-get install -y \
     jq \
     ca-certificates \
     unzip \
+    python3-pip \
+    python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
 # Install AWS CLI v2
