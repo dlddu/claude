@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Usage: analyze-transcript.sh <session_id>
-# Analyzes transcript from DynamoDB and outputs tool usage statistics
+# Analyzes transcript from S3 and outputs tool usage statistics
 
 SESSION_ID="${1:-}"
 if [[ -z "$SESSION_ID" ]]; then
@@ -10,24 +10,21 @@ if [[ -z "$SESSION_ID" ]]; then
   exit 1
 fi
 
-REGION="${AWS_REGION:-ap-northeast-2}"
-TABLE="${AWS_DYNAMODB_TABLE_NAME:-kubernetes-claude-transcript}"
+# 1. S3에서 transcript 다운로드
+TEMP_DIR=$(mktemp -d)
+trap "rm -rf $TEMP_DIR" EXIT
 
-# 1. DynamoDB에서 transcript 조회
-echo '{"session_id": {"S": "'"$SESSION_ID"'"}}' > /tmp/dynamo-key.json
-
-RESULT=$(aws dynamodb get-item \
-  --region "$REGION" \
-  --table-name "$TABLE" \
-  --key file:///tmp/dynamo-key.json \
-  --output json 2>/dev/null)
-
-if [[ -z "$RESULT" ]] || [[ "$(echo "$RESULT" | jq -r '.Item')" == "null" ]]; then
+# 메인 transcript 다운로드
+if ! aws s3 cp "s3://${AWS_S3_BUCKET_NAME}/${SESSION_ID}.jsonl" "$TEMP_DIR/transcript.jsonl" --region "$AWS_REGION" 2>/dev/null; then
   echo "{\"error\": \"Transcript not found for session: $SESSION_ID\"}" >&2
   exit 1
 fi
 
-echo "$RESULT" | jq -r '.Item.transcript.S' > /tmp/transcript.jsonl
+# subagents 폴더 다운로드 (없을 수도 있음)
+aws s3 cp "s3://${AWS_S3_BUCKET_NAME}/${SESSION_ID}/" "$TEMP_DIR/subagents/" --recursive --region "$AWS_REGION" 2>/dev/null || true
+
+# 모든 jsonl 파일을 합쳐서 분석
+cat "$TEMP_DIR"/transcript.jsonl "$TEMP_DIR"/subagents/*.jsonl 2>/dev/null > /tmp/transcript.jsonl
 
 # 2. 도구 호출과 결과를 매칭하여 분석
 jq -s --arg session_id "$SESSION_ID" '

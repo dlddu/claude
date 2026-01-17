@@ -28,42 +28,14 @@ if ! aws sts get-caller-identity --region "$AWS_REGION" &>/dev/null; then
     exit 1
 fi
 
-TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-DATE_BUCKET="${TIMESTAMP:0:10}"
-
 # Subagent 디렉토리 경로 도출
 SESSION_DIR="${TRANSCRIPT_FILE%.jsonl}"
 SUBAGENTS_DIR="$SESSION_DIR/subagents"
 
-# 임시 파일 생성 (스크립트 종료 시 삭제)
-ITEM_FILE=$(mktemp)
-COMBINED_FILE=$(mktemp)
-trap "rm -f $ITEM_FILE $COMBINED_FILE" EXIT
+# 메인 transcript S3 업로드
+aws s3 cp "$TRANSCRIPT_FILE" "s3://${AWS_S3_BUCKET_NAME}/${SESSION_ID}.jsonl" --region "$AWS_REGION"
 
-# Main transcript 복사
-cat "$TRANSCRIPT_FILE" > "$COMBINED_FILE"
-
-# Subagent transcripts 이어 붙이기
+# subagents 폴더가 있으면 그대로 업로드
 if [[ -d "$SUBAGENTS_DIR" ]]; then
-    for subagent_file in "$SUBAGENTS_DIR"/agent-*.jsonl; do
-        [[ -f "$subagent_file" ]] && cat "$subagent_file" >> "$COMBINED_FILE"
-    done
+    aws s3 cp "$SUBAGENTS_DIR" "s3://${AWS_S3_BUCKET_NAME}/${SESSION_ID}/" --recursive --region "$AWS_REGION"
 fi
-
-# DynamoDB item JSON 생성
-jq -n \
-    --arg session_id "$SESSION_ID" \
-    --arg timestamp "$TIMESTAMP" \
-    --arg date_bucket "$DATE_BUCKET" \
-    --rawfile transcript "$COMBINED_FILE" \
-    '{
-        "session_id": {"S": $session_id},
-        "timestamp": {"S": $timestamp},
-        "date_bucket": {"S": $date_bucket},
-        "transcript": {"S": $transcript}
-    }' > "$ITEM_FILE"
-
-aws dynamodb put-item \
-    --region "$AWS_REGION" \
-    --table-name "$AWS_DYNAMODB_TABLE_NAME" \
-    --item "file://$ITEM_FILE"

@@ -65,11 +65,11 @@ spec:
                       name: agent-supervisor-secrets
                       key: AWS_REGION
                       optional: true
-                - name: AWS_DYNAMODB_TABLE_NAME
+                - name: AWS_S3_BUCKET_NAME
                   valueFrom:
                     secretKeyRef:
                       name: agent-supervisor-secrets
-                      key: AWS_DYNAMODB_TABLE_NAME
+                      key: AWS_S3_BUCKET_NAME
                       optional: true
                 - name: GH_TOKEN
                   valueFrom:
