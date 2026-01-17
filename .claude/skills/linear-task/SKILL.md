@@ -1,7 +1,7 @@
 ---
 name: linear-task
 description: Linear 이슈에 대한 작업을 수행합니다. Subagent들을 orchestration하여 리서치, 라우팅, 실행을 자동화합니다. "태스크 작업", "이슈 처리", "Linear 작업" 요청 시 사용
-allowed-tools: mcp__linear-server__get_issue, mcp__linear-server__update_issue, mcp__linear-server__create_comment, Task, Bash, TodoWrite
+allowed-tools: mcp__linear-server__get_issue, mcp__linear-server__update_issue, mcp__linear-server__create_comment, Task, Skill, Bash, TodoWrite
 ---
 
 # Linear Task Orchestration Skill
@@ -78,21 +78,28 @@ Task tool 사용:
 
 **기대 출력**: JSON 형식의 라우팅 결정 및 작업 지시사항
 
-### Step 3: 실행 Subagent 호출
+### Step 3: 실행 에이전트 호출
 
-router의 결정에 따라 적절한 subagent를 호출합니다.
+router의 결정에 따라 적절한 에이전트를 호출합니다.
 
-**developer 선택 시**:
+**developer 선택 시** (Skill tool 사용):
 ```
-Task tool 사용:
-- subagent_type: "developer"
-- prompt: "다음 작업을 수행해주세요:
-  Repository: {repository_url}
+Skill tool 사용:
+- skill: "developer"
+- args: "Repository: {repository_url}
   작업 내용: {agent_instructions}
   완료 기준: {success_criteria}"
 ```
 
-**general-purpose 선택 시**:
+developer skill은 TDD 스타일 워크플로우를 수행합니다:
+1. codebase-analyzer로 코드베이스 분석
+2. test-writer로 테스트 작성 (Red Phase)
+3. code-writer로 구현 (Green Phase)
+4. local-test-validator로 로컬 검증
+5. PR 생성
+6. ci-validator로 CI 검증
+
+**general-purpose 선택 시** (Task tool 사용):
 ```
 Task tool 사용:
 - subagent_type: "general-purpose"
@@ -202,9 +209,11 @@ Task tool 사용:
 
 ## Quick Reference
 
-| 단계 | Subagent | 입력 | 출력 |
-|------|----------|------|------|
-| 1 | linear-task-researcher | issue_id | JSON (이슈 정보, 컨텍스트) |
-| 2 | task-router | researcher 출력 | JSON (라우팅 결정, 지시사항) |
-| 3 | developer / general-purpose | router 지시사항 | 작업 완료 보고 |
+| 단계 | Agent/Skill | 입력 | 출력 |
+|------|-------------|------|------|
+| 1 | linear-task-researcher (subagent) | issue_id | JSON (이슈 정보, 컨텍스트) |
+| 2 | task-router (subagent) | researcher 출력 | JSON (라우팅 결정, 지시사항) |
+| 3 | developer (skill) / general-purpose (subagent) | router 지시사항 | 작업 완료 보고 (PR URL 포함) |
 | 4 | (이 skill) | 전체 결과 | Linear 코멘트 |
+
+**Note**: developer는 skill로 호출되며, 내부적으로 TDD 워크플로우를 수행합니다 (codebase-analyzer → test-writer → code-writer → local-test-validator → PR → ci-validator)
