@@ -1,6 +1,6 @@
 ---
 name: task-router
-description: 작업의 성격을 분석하여 적절한 subagent(developer 또는 general-worker)를 결정하는 라우팅 에이전트. 작업 분류 및 라우팅 결정에 사용합니다.
+description: 작업의 성격을 분석하여 적절한 subagent(developer 또는 general-purpose)를 결정하는 라우팅 에이전트. 작업 분류 및 라우팅 결정에 사용합니다.
 tools: Read, Glob, Grep
 model: haiku
 ---
@@ -33,9 +33,9 @@ model: haiku
 
 **키워드 힌트**: implement, fix, bug, feature, refactor, code, test, build, deploy, PR, pull request, commit, merge, branch
 
-### → General Worker Subagent
+### → General Purpose Agent
 
-다음 조건에 해당하면 `general-worker`를 선택합니다:
+다음 조건에 해당하면 `general-purpose`를 선택합니다:
 
 - 문서 작성/수정만 필요한 경우
 - 리서치/조사 작업인 경우
@@ -73,7 +73,7 @@ model: haiku
 ```json
 {
   "routing_decision": {
-    "selected_agent": "developer" | "general-worker",
+    "selected_agent": "developer" | "general-purpose",
     "confidence": "high" | "medium" | "low",
     "reasoning": "선택 이유 설명"
   },
@@ -102,7 +102,7 @@ model: haiku
 ### 혼합 작업
 코드 변경과 문서 작업이 모두 필요한 경우:
 - 코드 변경이 주요 작업이면 → `developer`
-- 문서가 주요 산출물이면 → `general-worker`
+- 문서가 주요 산출물이면 → `general-purpose`
 
 ### 불명확한 경우
 작업 내용이 불명확한 경우:

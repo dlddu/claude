@@ -31,7 +31,7 @@ Linear 이슈를 처리하기 위해 여러 subagent를 orchestration하는 skil
 ┌─────────────────┐
 │   developer     │ Step 3: 실제 작업 수행
 │      OR         │
-│ general-worker  │
+│ general-purpose │
 └────────┬────────┘
          │
          ▼
@@ -92,10 +92,10 @@ Task tool 사용:
   완료 기준: {success_criteria}"
 ```
 
-**general-worker 선택 시**:
+**general-purpose 선택 시**:
 ```
 Task tool 사용:
-- subagent_type: "general-worker"
+- subagent_type: "general-purpose"
 - prompt: "다음 작업을 수행해주세요:
   작업 내용: {agent_instructions}
   완료 기준: {success_criteria}"
@@ -154,7 +154,7 @@ Task tool 사용:
 **Routing Decision**: `{selected_agent}` (confidence: {confidence})
 
 ### 블로킹 단계
-{researcher | router | developer | general-worker} 단계에서 블로킹
+{researcher | router | developer | general-purpose} 단계에서 블로킹
 
 ### 블로킹 사유
 {상세 사유}
@@ -206,5 +206,5 @@ Task tool 사용:
 |------|----------|------|------|
 | 1 | linear-task-researcher | issue_id | JSON (이슈 정보, 컨텍스트) |
 | 2 | task-router | researcher 출력 | JSON (라우팅 결정, 지시사항) |
-| 3 | developer / general-worker | router 지시사항 | 작업 완료 보고 |
+| 3 | developer / general-purpose | router 지시사항 | 작업 완료 보고 |
 | 4 | (이 skill) | 전체 결과 | Linear 코멘트 |
