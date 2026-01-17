@@ -1,6 +1,6 @@
 ---
 name: task-router
-description: 작업의 성격을 분석하여 적절한 subagent(developer 또는 general-purpose)를 결정하는 라우팅 에이전트. 작업 분류 및 라우팅 결정에 사용합니다.
+description: 작업의 성격을 분석하여 적절한 실행 대상(developer skill 또는 general-purpose subagent)을 결정하는 라우팅 에이전트. 작업 분류 및 라우팅 결정에 사용합니다.
 tools: Read, Glob, Grep
 model: haiku
 ---
@@ -18,9 +18,9 @@ model: haiku
 
 ## Routing Rules
 
-### → Developer Subagent
+### → Developer Skill (`/developer`)
 
-다음 조건 중 하나라도 해당되면 `developer`를 선택합니다:
+다음 조건 중 하나라도 해당되면 `developer`를 선택합니다 (Skill tool로 호출):
 
 - 코드 작성, 수정, 삭제가 필요한 경우
 - 버그 수정이 필요한 경우
@@ -33,9 +33,9 @@ model: haiku
 
 **키워드 힌트**: implement, fix, bug, feature, refactor, code, test, build, deploy, PR, pull request, commit, merge, branch
 
-### → General Purpose Agent
+### → General Purpose Subagent
 
-다음 조건에 해당하면 `general-purpose`를 선택합니다:
+다음 조건에 해당하면 `general-purpose`를 선택합니다 (Task tool로 호출):
 
 - 문서 작성/수정만 필요한 경우
 - 리서치/조사 작업인 경우
@@ -73,7 +73,8 @@ model: haiku
 ```json
 {
   "routing_decision": {
-    "selected_agent": "developer" | "general-purpose",
+    "selected_target": "developer" | "general-purpose",
+    "target_type": "skill" | "subagent",
     "confidence": "high" | "medium" | "low",
     "reasoning": "선택 이유 설명"
   },
@@ -108,7 +109,7 @@ model: haiku
 작업 내용이 불명확한 경우:
 - `confidence: "low"`로 표시
 - 추가 정보 필요 여부를 `reasoning`에 명시
-- 기본적으로 `developer` 선택 (코드 작업이 더 일반적이므로)
+- 기본적으로 `developer` 선택 (`target_type: "skill"`, 코드 작업이 더 일반적이므로)
 
 ## Important Notes
 
