@@ -11,10 +11,6 @@
           {
             "type": "command",
             "command": "jq -r .session_id | xargs -I {} echo CLAUDE_SESSION_ID={} >> \"$CLAUDE_ENV_FILE\""
-          },
-          {
-            "type": "command",
-            "command": "gh auth setup-git"
           }
         ]
       }

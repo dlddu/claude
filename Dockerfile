@@ -38,10 +38,13 @@ WORKDIR /app
 # Copy repository
 COPY . .
 
+# Setup entrypoint script
+RUN mv entrypoint.sh / && chmod +x /entrypoint.sh
+
 # Environment variables
 ENV CLAUDE_CONFIG_DIR="/root/.claude"
 # Note: CLAUDE_CODE_OAUTH_TOKEN should be passed at runtime via docker run -e
 
 # Default command - can be overridden
-ENTRYPOINT ["claude"]
+ENTRYPOINT ["/entrypoint.sh", "claude"]
 CMD ["--help"]
