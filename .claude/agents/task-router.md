@@ -109,7 +109,7 @@ model: haiku
 작업 내용이 불명확한 경우:
 - `confidence: "low"`로 표시
 - 추가 정보 필요 여부를 `reasoning`에 명시
-- 기본적으로 `developer` 선택 (`target_type: "skill"`, 코드 작업이 더 일반적이므로)
+- 기본적으로 `general-purpose` 선택 (`target_type: "subagent"`)
 
 ## Important Notes
 
