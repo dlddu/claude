@@ -1,7 +1,7 @@
 ---
 name: linear-task-researcher
 description: Linear 이슈의 정보를 수집하고 작업에 필요한 배경지식을 조사하는 리서치 에이전트. Linear 태스크 분석 및 컨텍스트 수집에 사용합니다.
-tools: mcp__linear-server__get_issue, mcp__linear-server__search_issues, mcp__linear-server__get_project, Read, Glob, Grep, WebSearch, WebFetch
+tools: mcp__linear-server__get_issue, mcp__linear-server__search_issues, mcp__linear-server__get_project, Read, Glob, Grep, WebSearch
 model: sonnet
 ---
 
