@@ -5,7 +5,10 @@
       "Bash(echo $CLAUDE_SESSION_ID)",
       "WebSearch"
     ],
-    "defaultMode": "dontAsk"
+    "defaultMode": "dontAsk",
+    "additionalDirectories": [
+      "/tmp"
+    ]
   },
   "model": "opus",
   "hooks": {
