@@ -46,6 +46,7 @@
 		}
 	],
 	"containerEnv": {
-		"CLAUDE_CONFIG_DIR": "${containerWorkspaceFolder}/.claude"
+		"CLAUDE_CONFIG_DIR": "${containerWorkspaceFolder}/.claude",
+		"SKIP_SESSION_HOOKS": "true"
 	}
 }

@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Skip in devcontainer environment
+if [[ "$SKIP_SESSION_HOOKS" == "true" ]]; then
+    exit 0
+fi
+
 INPUT="$(cat)"
 SESSION_ID="$(echo "$INPUT" | jq -r .session_id)"
 TRANSCRIPT_FILE="$(echo "$INPUT" | jq -r .transcript_path)"
