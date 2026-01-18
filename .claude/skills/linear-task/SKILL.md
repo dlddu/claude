@@ -102,12 +102,11 @@ developer skill은 TDD 스타일 워크플로우를 수행합니다:
 6. ci-validator로 CI 검증
 7. linear-status-reporter로 결과 보고
 
-**general-purpose-wrapper 선택 시** (Task tool 사용):
+**general-purpose-wrapper 선택 시** (Skill tool 사용):
 ```
-Task tool 사용:
-- subagent_type: "general-purpose-wrapper"
-- prompt: "다음 작업을 수행해주세요:
-  작업 내용: {agent_instructions}
+Skill tool 사용:
+- skill: "general-purpose-wrapper"
+- args: "작업 내용: {agent_instructions}
   완료 기준: {success_criteria}
 
   [Linear Context]
@@ -157,9 +156,9 @@ general-purpose-wrapper는:
 |------|-------------|------|------|
 | 1 | linear-task-researcher (subagent) | issue_id | JSON (이슈 정보, 컨텍스트) |
 | 2 | task-router (subagent) | researcher 출력 | JSON (라우팅 결정, 지시사항) |
-| 3 | developer (skill) / general-purpose-wrapper (subagent) | router 지시사항 + Linear Context | 작업 완료 보고 + Linear 상태 업데이트 |
+| 3 | developer (skill) / general-purpose-wrapper (skill) | router 지시사항 + Linear Context | 작업 완료 보고 + Linear 상태 업데이트 |
 
 **Note**:
 - developer는 skill로 호출되며, 내부적으로 TDD 워크플로우를 수행합니다 (codebase-analyzer → test-writer → code-writer → local-test-validator → PR → ci-validator → linear-status-reporter)
-- general-purpose-wrapper는 general-purpose 작업 후 linear-status-reporter를 호출합니다
+- general-purpose-wrapper는 skill로 호출되며, general-purpose 작업 후 linear-status-reporter를 호출합니다
 - 각 executor가 Linear Context를 받아 직접 linear-status-reporter를 호출하여 결과를 보고합니다

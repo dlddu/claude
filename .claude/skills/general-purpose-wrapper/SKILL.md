@@ -1,19 +1,18 @@
 ---
 name: general-purpose-wrapper
-description: General-purpose 작업 수행 후 Linear 상태 보고를 수행하는 래퍼 에이전트. linear-task에서 일반 작업(문서, 리서치, 분석 등) 라우팅 시 사용합니다.
-tools: Task
-model: sonnet
+description: General-purpose 작업 수행 후 Linear 상태 보고를 수행하는 래퍼 스킬. linear-task에서 일반 작업(문서, 리서치, 분석 등) 라우팅 시 사용합니다.
+allowed-tools: Task
 ---
 
-# General Purpose Wrapper Subagent
+# General Purpose Wrapper Skill
 
-일반 목적 작업을 수행하고 Linear 이슈 상태를 업데이트하는 래퍼 에이전트입니다.
+일반 목적 작업을 수행하고 Linear 이슈 상태를 업데이트하는 래퍼 스킬입니다.
 
 ## Architecture
 
 ```
 ┌─────────────────────┐
-│ general-purpose-    │ (이 Subagent)
+│ general-purpose-    │ (이 Skill)
 │      wrapper        │
 └─────────┬───────────┘
           │
@@ -32,7 +31,7 @@ model: sonnet
 
 ## Input Format
 
-이 subagent는 다음 형식의 prompt를 받습니다:
+이 skill은 다음 형식의 args를 받습니다:
 
 ```
 작업 내용: {agent_instructions}
