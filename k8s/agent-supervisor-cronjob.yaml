@@ -31,6 +31,8 @@ spec:
               imagePullPolicy: Always
               restartPolicy: Always  # Native sidecar (K8s 1.29+)
               command:
+                - /entrypoint.sh
+              args:
                 - /bin/bash
                 - -c
                 - /app/k8s/transcript-uploader.sh
@@ -67,6 +69,8 @@ spec:
               image: ghcr.io/dlddu/claude:latest
               imagePullPolicy: Always
               command:
+                - /entrypoint.sh
+              args:
                 - /bin/bash
                 - -c
                 - /app/k8s/agent-supervisor.sh
