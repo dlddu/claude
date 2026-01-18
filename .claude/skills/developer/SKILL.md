@@ -30,15 +30,35 @@ GitHub repository에서 TDD 스타일로 개발 작업을 수행하고 PR을 생
                         └─────────────────┘ └─────────────────┘
 ```
 
+## Todo Management (Parent Todo Preservation)
+
+이 skill은 linear-task 등 상위 skill의 하위로 호출될 수 있습니다. 상위 workflow의 todo를 보존하면서 developer의 세부 단계를 추적해야 합니다.
+
+### Parent Todo 감지
+
+args에 `---PARENT_TODOS---` 섹션이 포함되어 있으면 상위 skill에서 호출된 것입니다.
+
+### Todo 초기화 규칙 (Step 0에서 수행)
+
+**Parent todos가 있는 경우** (linear-task 등에서 호출):
+
+TodoWrite로 다음 형식의 todo 목록을 생성합니다:
+- 상위 skill의 todo들을 그대로 유지
+- `[in_progress]` 상태인 상위 todo 바로 다음에 developer의 todo들을 삽입
+
 ## Workflow
 
-### Step 0: Session ID 확인
+### Step 0: Session ID 확인 및 Todo 초기화
 
-```bash
-echo $CLAUDE_SESSION_ID
-```
+1. **Session ID 확인**:
+   ```bash
+   echo $CLAUDE_SESSION_ID
+   ```
+   이 Session ID는 모든 결과에 포함됩니다.
 
-이 Session ID는 모든 결과에 포함됩니다.
+2. **Todo 초기화**:
+   - args에 `---PARENT_TODOS---` 섹션이 있는지 확인
+   - 위 "Todo Management" 섹션의 parent todos 포함 형식으로 TodoWrite 호출
 
 ### Step 1: Repository 준비
 

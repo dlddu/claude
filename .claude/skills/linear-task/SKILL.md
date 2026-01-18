@@ -102,13 +102,21 @@ Task tool 사용:
 router의 결정에 따라 적절한 에이전트를 호출합니다.
 
 **developer 선택 시** (Skill tool 사용):
+
+**중요**: developer skill이 상위 todo를 보존할 수 있도록 `---PARENT_TODOS---` 섹션을 args에 포함해야 합니다.
+
 ```
 Skill tool 사용:
 - skill: "developer"
 - args: "Repository: {repository_url}
   작업 내용: {agent_instructions}
-  완료 기준: {success_criteria}"
+  완료 기준: {success_criteria}
+
+  ---PARENT_TODOS---
+  {todos}
 ```
+
+developer skill은 이 정보를 사용하여 TodoWrite 시 상위 작업의 컨텍스트를 유지합니다.
 
 developer skill은 TDD 스타일 워크플로우를 수행합니다:
 1. codebase-analyzer로 코드베이스 분석
