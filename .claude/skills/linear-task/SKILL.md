@@ -18,31 +18,50 @@ Linear 이슈를 처리하기 위해 여러 subagent를 orchestration하는 skil
          │
          ▼
 ┌─────────────────┐
-│ linear-task-    │ Step 1: 이슈 정보 및 배경지식 수집
+│   TodoWrite     │ Step 0: 작업 계획 작성 (필수)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ linear-task-    │ Step 2: 이슈 정보 및 배경지식 수집
 │   researcher    │
 └────────┬────────┘
          │
          ▼
 ┌─────────────────┐
-│  task-router    │ Step 2: 작업 유형 분석 및 에이전트 결정
+│  task-router    │ Step 3: 작업 유형 분석 및 에이전트 결정
 └────────┬────────┘
          │
          ▼
 ┌─────────────────┐
-│   developer     │ Step 3: 실제 작업 수행
+│   developer     │ Step 4: 실제 작업 수행
 │      OR         │
 │ general-purpose │
 └────────┬────────┘
          │
          ▼
 ┌─────────────────┐
-│ Linear Comment  │ Step 4: 결과 보고
+│ Linear Comment  │ Step 5: 결과 보고
 └─────────────────┘
 ```
 
 ## Workflow
 
-### Step 0: Session ID 확인
+### Step 0: Todo 작성 (필수)
+
+**작업 시작 전 반드시 TodoWrite로 작업 계획을 작성해야 합니다.**
+
+다음 항목들을 todo로 작성합니다:
+
+1. Session ID 확인
+2. Researcher subagent로 이슈 정보 수집
+3. Router subagent로 작업 유형 분석
+4. 실행 에이전트 호출 (developer 또는 general-purpose)
+5. Linear 상태 업데이트 및 코멘트 작성
+
+각 단계 완료 시 해당 todo를 completed로 표시합니다.
+
+### Step 1: Session ID 확인
 
 먼저 환경 변수에서 Session ID를 확인합니다:
 
@@ -52,7 +71,7 @@ echo $CLAUDE_SESSION_ID
 
 이 Session ID는 최종 코멘트에 포함됩니다.
 
-### Step 1: Researcher Subagent 호출
+### Step 2: Researcher Subagent 호출
 
 `linear-task-researcher` subagent를 Task tool로 호출합니다.
 
@@ -65,7 +84,7 @@ Task tool 사용:
 
 **기대 출력**: JSON 형식의 이슈 정보, repository 정보, 기술적 컨텍스트
 
-### Step 2: Router Subagent 호출
+### Step 3: Router Subagent 호출
 
 researcher의 결과를 `task-router` subagent에 전달합니다.
 
@@ -78,7 +97,7 @@ Task tool 사용:
 
 **기대 출력**: JSON 형식의 라우팅 결정 및 작업 지시사항
 
-### Step 3: 실행 에이전트 호출
+### Step 4: 실행 에이전트 호출
 
 router의 결정에 따라 적절한 에이전트를 호출합니다.
 
@@ -108,7 +127,7 @@ Task tool 사용:
   완료 기준: {success_criteria}"
 ```
 
-### Step 4: Linear 상태 업데이트 및 코멘트 작성
+### Step 5: Linear 상태 업데이트 및 코멘트 작성
 
 작업 결과에 따라 Linear 이슈를 업데이트합니다.
 
@@ -211,9 +230,11 @@ Task tool 사용:
 
 | 단계 | Agent/Skill | 입력 | 출력 |
 |------|-------------|------|------|
-| 1 | linear-task-researcher (subagent) | issue_id | JSON (이슈 정보, 컨텍스트) |
-| 2 | task-router (subagent) | researcher 출력 | JSON (라우팅 결정, 지시사항) |
-| 3 | developer (skill) / general-purpose (subagent) | router 지시사항 | 작업 완료 보고 (PR URL 포함) |
-| 4 | (이 skill) | 전체 결과 | Linear 코멘트 |
+| 0 | TodoWrite | 작업 계획 | Todo 리스트 |
+| 1 | Session ID 확인 | 환경변수 | session_id |
+| 2 | linear-task-researcher (subagent) | issue_id | JSON (이슈 정보, 컨텍스트) |
+| 3 | task-router (subagent) | researcher 출력 | JSON (라우팅 결정, 지시사항) |
+| 4 | developer (skill) / general-purpose (subagent) | router 지시사항 | 작업 완료 보고 (PR URL 포함) |
+| 5 | (이 skill) | 전체 결과 | Linear 코멘트 |
 
 **Note**: developer는 skill로 호출되며, 내부적으로 TDD 워크플로우를 수행합니다 (codebase-analyzer → test-writer → code-writer → local-test-validator → PR → ci-validator)
