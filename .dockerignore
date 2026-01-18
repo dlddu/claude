@@ -11,3 +11,4 @@ README.md
 .env.example
 !.claude/hooks
 !.claude/skills
+!.claude/agents

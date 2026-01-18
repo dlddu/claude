@@ -1,115 +1,251 @@
 ---
 name: linear-task
-description: Linear sub-task에 대한 작업을 수행하고 상태를 업데이트합니다. "태스크 작업", "sub-task 완료" 요청 시 사용
-allowed-tools: mcp__linear-server__get_issue, mcp__linear-server__update_issue, mcp__linear-server__create_comment, Read, Write, Edit, Glob, Grep, Bash, Task, TodoWrite
+description: Linear 이슈에 대한 작업을 수행합니다. Subagent들을 orchestration하여 리서치, 라우팅, 실행을 자동화합니다. "태스크 작업", "이슈 처리", "Linear 작업" 요청 시 사용
+allowed-tools: mcp__linear-server__get_issue, Task, Skill, Bash, TodoWrite
 ---
 
-# Linear Sub-task Execution
+# Linear Task Orchestration Skill
 
-할당된 Linear sub-task에 대해 작업을 수행합니다.
+Linear 이슈를 처리하기 위해 여러 subagent를 orchestration하는 skill입니다.
 
-## Instructions
-
-### Step 1: Sub-task 분석
-
-1. 사용자가 제공한 sub-task ID를 사용하여 Linear MCP로 정보를 가져옵니다
-2. sub-task의 제목, 설명, 완료 기준을 확인합니다
-3. 부모 이슈의 컨텍스트도 함께 확인합니다
-
-### Step 2: 작업 계획 작성
-
-sub-task를 완료하기 위한 세부 계획을 작성합니다:
-
-1. 수정해야 할 파일 식별
-2. 구현 방법 결정
-3. 테스트 방법 결정
-4. TodoWrite 도구를 사용하여 작업 추적
-
-### Step 3: 작업 수행
-
-계획에 따라 작업을 진행합니다:
-
-1. 코드 변경 수행
-2. 필요한 테스트 작성/수정
-3. 린트 및 타입 체크 통과 확인
-4. 변경사항 커밋
-
-### Step 4: 상태 업데이트 및 코멘트 작성
-
-먼저 Bash로 `echo $CLAUDE_SESSION_ID`를 실행하여 session ID를 확인합니다.
-
-#### 작업 완료 시
-
-1. Linear MCP를 사용하여 sub-task 상태를 **Done**으로 변경합니다
-2. `mcp__linear-server__create_comment`를 사용하여 완료 코멘트를 작성합니다
-
-완료 코멘트 형식:
-
-```markdown
-## 작업 완료 보고
-
-**Claude Session ID**: `{session_id}`
-
-### 수행한 작업
-- {작업 내용 1}
-- {작업 내용 2}
-
-### 변경된 파일
-- `{파일 경로 1}`
-- `{파일 경로 2}`
-
-### 테스트 결과
-{테스트 실행 결과 요약}
-```
-
-#### 작업 완료 불가 시
-
-다음 상황에서는 sub-task 상태를 **Blocked**로 변경합니다:
-
-- 외부 의존성이 해결되지 않은 경우
-- 추가 정보나 결정이 필요한 경우
-- 기술적 제약으로 진행이 불가능한 경우
-- 다른 작업이 먼저 완료되어야 하는 경우
-
-Blocked 상태로 변경 시 `mcp__linear-server__create_comment`를 사용하여 다음 형식으로 코멘트를 작성합니다:
-
-```markdown
-## 작업 블로킹 보고
-
-**Claude Session ID**: `{session_id}`
-
-### 블로킹 사유
-{사유 설명}
-
-### 해결을 위해 필요한 조치
-- {필요한 조치 1}
-- {필요한 조치 2}
-
-### 관련 정보
-- 관련 이슈: {있는 경우}
-- 담당자: {알고 있는 경우}
-```
-
-## Workflow Summary
+## Architecture
 
 ```
-1. Sub-task 정보 조회
-   ↓
-2. 작업 계획 수립
-   ↓
-3. 코드 변경 및 테스트
-   ↓
-4. 결과에 따른 상태 변경
-   ├─ 성공 → Done + 완료 코멘트
-   └─ 실패 → Blocked + 사유 코멘트
+┌─────────────────┐
+│  linear-task    │ (이 Skill)
+│   Orchestrator  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   TodoWrite     │ Step 0: 작업 계획 작성 (필수)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ linear-task-    │ Step 2: 이슈 정보 및 배경지식 수집
+│   researcher    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  task-router    │ Step 3: 작업 유형 분석 및 에이전트 결정
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   developer     │ Step 4: 실제 작업 수행
+│      OR         │
+│ general-purpose │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ linear-status-  │ Step 5: 결과 보고 (상태 및 코멘트)
+│    reporter     │
+└─────────────────┘
 ```
 
-## Output Format
+## Workflow
 
-작업이 완료되면 다음을 출력합니다:
+### Step 0: Todo 작성 (필수)
 
-1. Sub-task 요약
-2. 수행한 작업 내용
-3. 변경된 파일 목록
-4. 최종 상태 (Done 또는 Blocked)
-5. (Blocked인 경우) 블로킹 사유 및 해결 방안
+**작업 시작 전 반드시 TodoWrite로 작업 계획을 작성해야 합니다.**
+
+다음 항목들을 todo로 작성합니다:
+
+1. Session ID 확인
+2. Researcher subagent로 이슈 정보 수집
+3. Router subagent로 작업 유형 분석
+4. 실행 에이전트 호출 (developer 또는 general-purpose)
+5. Linear 상태 업데이트 및 코멘트 작성
+
+각 단계 완료 시 해당 todo를 completed로 표시합니다.
+
+### Step 1: Session ID 확인
+
+먼저 환경 변수에서 Session ID를 확인합니다:
+
+```bash
+echo $CLAUDE_SESSION_ID
+```
+
+이 Session ID는 최종 코멘트에 포함됩니다.
+
+### Step 2: Researcher Subagent 호출
+
+`linear-task-researcher` subagent를 Task tool로 호출합니다.
+
+**호출 방법**:
+```
+Task tool 사용:
+- subagent_type: "linear-task-researcher"
+- prompt: "Linear 이슈 {issue_id}에 대한 정보를 수집하고 작업에 필요한 배경지식을 조사해주세요."
+```
+
+**기대 출력**: JSON 형식의 이슈 정보, repository 정보, 기술적 컨텍스트
+
+### Step 3: Router Subagent 호출
+
+researcher의 결과를 `task-router` subagent에 전달합니다.
+
+**호출 방법**:
+```
+Task tool 사용:
+- subagent_type: "task-router"
+- prompt: "다음 작업 정보를 분석하여 적절한 실행 에이전트를 결정해주세요: {researcher_output}"
+```
+
+**기대 출력**: JSON 형식의 라우팅 결정 및 작업 지시사항
+
+### Step 4: 실행 에이전트 호출
+
+router의 결정에 따라 적절한 에이전트를 호출합니다.
+
+**developer 선택 시** (Skill tool 사용):
+
+**중요**: developer skill이 상위 todo를 보존할 수 있도록 `---PARENT_TODOS---` 섹션을 args에 포함해야 합니다.
+
+```
+Skill tool 사용:
+- skill: "developer"
+- args: "Repository: {repository_url}
+  작업 내용: {agent_instructions}
+  완료 기준: {success_criteria}
+
+  ---PARENT_TODOS---
+  {todos}
+```
+
+developer skill은 이 정보를 사용하여 TodoWrite 시 상위 작업의 컨텍스트를 유지합니다.
+
+developer skill은 TDD 스타일 워크플로우를 수행합니다:
+1. codebase-analyzer로 코드베이스 분석
+2. test-writer로 테스트 작성 (Red Phase)
+3. code-writer로 구현 (Green Phase)
+4. local-test-validator로 로컬 검증
+5. PR 생성
+6. ci-validator로 CI 검증
+
+**general-purpose 선택 시** (Task tool 사용):
+```
+Task tool 사용:
+- subagent_type: "general-purpose"
+- prompt: "다음 작업을 수행해주세요:
+  작업 내용: {agent_instructions}
+  완료 기준: {success_criteria}"
+```
+
+### Step 5: Linear 상태 업데이트 및 코멘트 작성
+
+`linear-status-reporter` subagent를 호출하여 Linear 이슈를 업데이트합니다.
+
+**호출 방법**:
+```
+Task tool 사용:
+- subagent_type: "linear-status-reporter"
+- prompt: 다음 JSON 형식의 정보를 전달합니다
+```
+
+#### 성공 시 Input
+
+```json
+{
+  "issue_id": "{issue_id}",
+  "team_id": "{team_id}",
+  "session_id": "{session_id}",
+  "status": "success",
+  "routing_decision": {
+    "selected_target": "{router 결과의 selected_target}",
+    "confidence": "{router 결과의 confidence}",
+    "reasoning": "{router 결과의 reasoning}"
+  },
+  "work_summary": {
+    "task_type": "{researcher 결과의 task_type}",
+    "complexity": "{researcher 결과의 complexity}",
+    "estimated_scope": "{researcher 결과의 estimated_scope}"
+  },
+  "work_result": {
+    "executor": "{developer | general-purpose}",
+    "summary": "{executor의 작업 요약}",
+    "changes": ["{변경 사항들}"],
+    "pr_info": {
+      "url": "{PR URL}",
+      "branch": "{브랜치 이름}"
+    },
+    "verification": "{테스트/빌드 결과}"
+  }
+}
+```
+
+#### 블로킹 시 Input
+
+```json
+{
+  "issue_id": "{issue_id}",
+  "team_id": "{team_id}",
+  "session_id": "{session_id}",
+  "status": "blocked",
+  "routing_decision": {
+    "selected_target": "{router 결과의 selected_target}",
+    "confidence": "{router 결과의 confidence}",
+    "reasoning": "{router 결과의 reasoning}"
+  },
+  "work_summary": {
+    "task_type": "{researcher 결과의 task_type}",
+    "complexity": "{researcher 결과의 complexity}",
+    "estimated_scope": "{researcher 결과의 estimated_scope}"
+  },
+  "blocking_info": {
+    "stage": "{블로킹된 단계}",
+    "reason": "{블로킹 사유}",
+    "attempted_actions": ["{시도한 작업들}"],
+    "required_actions": ["{필요한 조치들}"],
+    "collected_info": "{수집된 정보 요약}"
+  }
+}
+```
+
+**기대 출력**: JSON 형식의 업데이트 결과 (`status_updated`, `comment_created`)
+
+## Error Handling
+
+### Researcher 실패 시
+- Linear API 접근 문제인지 확인
+- 이슈 ID가 올바른지 확인
+- 실패 사유와 함께 Blocked 상태로 전환
+
+### Router 실패 시
+- researcher 출력 형식 확인
+- 기본값으로 developer 선택 후 진행
+- 불확실성을 코멘트에 명시
+
+### Executor 실패 시
+- 실패 원인 분석
+- 부분 완료된 작업 정리
+- 상세한 실패 보고서 작성
+
+## Important Notes
+
+1. **Subagent 순차 호출**: 각 subagent는 순차적으로 호출해야 합니다 (subagent는 다른 subagent를 호출할 수 없음)
+
+2. **컨텍스트 전달**: 각 단계의 출력을 다음 단계에 완전히 전달해야 합니다
+
+3. **Session ID 필수**: 모든 코멘트에 Session ID를 반드시 포함합니다
+
+4. **상태 관리**: 작업 시작 시 In Progress, 완료 시 Done 또는 Blocked로 변경
+
+5. **에러 복구**: 가능한 경우 에러 복구를 시도하고, 불가능한 경우 명확한 보고
+
+## Quick Reference
+
+| 단계 | Agent/Skill | 입력 | 출력 |
+|------|-------------|------|------|
+| 0 | TodoWrite | 작업 계획 | Todo 리스트 |
+| 1 | Session ID 확인 | 환경변수 | session_id |
+| 2 | linear-task-researcher (subagent) | issue_id | JSON (이슈 정보, 컨텍스트) |
+| 3 | task-router (subagent) | researcher 출력 | JSON (라우팅 결정, 지시사항) |
+| 4 | developer (skill) / general-purpose (subagent) | router 지시사항 | 작업 완료 보고 (PR URL 포함) |
+| 5 | linear-status-reporter (subagent) | 작업 결과 | JSON (업데이트 확인) |
+
+**Note**: developer는 skill로 호출되며, 내부적으로 TDD 워크플로우를 수행합니다 (codebase-analyzer → test-writer → code-writer → local-test-validator → PR → ci-validator)

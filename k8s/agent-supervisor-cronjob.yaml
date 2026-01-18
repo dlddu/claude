@@ -13,7 +13,7 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
-      activeDeadlineSeconds: 1200  # Force terminate after 20 minutes
+      activeDeadlineSeconds: 1800  # Force terminate after 20 minutes
       backoffLimit: 0
       template:
         metadata:
@@ -65,9 +65,15 @@ spec:
                       name: agent-supervisor-secrets
                       key: AWS_REGION
                       optional: true
-                - name: AWS_DYNAMODB_TABLE_NAME
+                - name: AWS_S3_BUCKET_NAME
                   valueFrom:
                     secretKeyRef:
                       name: agent-supervisor-secrets
-                      key: AWS_DYNAMODB_TABLE_NAME
+                      key: AWS_S3_BUCKET_NAME
+                      optional: true
+                - name: GH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: agent-supervisor-secrets
+                      key: GH_TOKEN
                       optional: true
