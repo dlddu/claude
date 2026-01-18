@@ -27,7 +27,14 @@ GitHub repository에서 TDD 스타일로 개발 작업을 수행하고 PR을 생
                         ┌─────────────────┐ ┌─────────────────┐
                         │ local-test-     │ │   ci-validator  │
                         │   validator     │ │                 │
-                        └─────────────────┘ └─────────────────┘
+                        └─────────────────┘ └────────┬────────┘
+                                                     │
+                                                     ▼
+                                          ┌─────────────────┐
+                                          │ linear-status-  │
+                                          │    reporter     │
+                                          │   (optional)    │
+                                          └─────────────────┘
 ```
 
 ## Workflow
@@ -167,7 +174,81 @@ prompt: "PR의 CI가 완료될 때까지 대기하고 결과를 확인해주세�
 4. ci-validator 재호출
 5. **최대 2회 재시도**
 
-### Step 9: 결과 반환
+### Step 9: Linear 상태 보고 (Optional)
+
+Linear 컨텍스트가 제공된 경우, `linear-status-reporter` subagent를 호출하여 이슈를 업데이트합니다.
+
+**Linear 컨텍스트 확인**:
+- 입력에서 `issue_id`, `team_id`, `session_id`, `routing_decision`, `work_summary`가 제공되었는지 확인합니다
+- 제공되지 않은 경우 이 단계를 건너뜁니다
+
+**호출 방법**:
+```
+Task tool 사용:
+subagent_type: "linear-status-reporter"
+prompt: 다음 JSON 형식의 정보를 전달합니다
+```
+
+#### 성공 시 Input (status가 completed인 경우)
+
+```json
+{
+  "issue_id": "{issue_id}",
+  "team_id": "{team_id}",
+  "session_id": "{session_id}",
+  "status": "success",
+  "routing_decision": {
+    "selected_target": "developer",
+    "confidence": "{routing_decision.confidence}",
+    "reasoning": "{routing_decision.reasoning}"
+  },
+  "work_summary": {
+    "task_type": "{work_summary.task_type}",
+    "complexity": "{work_summary.complexity}",
+    "estimated_scope": "{work_summary.estimated_scope}"
+  },
+  "work_result": {
+    "executor": "developer",
+    "summary": "{작업 요약}",
+    "changes": ["{files_created}", "{files_modified}"],
+    "pr_info": {
+      "url": "{pr.url}",
+      "branch": "{repository.branch}"
+    },
+    "verification": "테스트: {tests.passed}/{tests.total} 통과, CI: {pr.ci_status}"
+  }
+}
+```
+
+#### 블로킹 시 Input (status가 blocked/failed인 경우)
+
+```json
+{
+  "issue_id": "{issue_id}",
+  "team_id": "{team_id}",
+  "session_id": "{session_id}",
+  "status": "blocked",
+  "routing_decision": {
+    "selected_target": "developer",
+    "confidence": "{routing_decision.confidence}",
+    "reasoning": "{routing_decision.reasoning}"
+  },
+  "work_summary": {
+    "task_type": "{work_summary.task_type}",
+    "complexity": "{work_summary.complexity}",
+    "estimated_scope": "{work_summary.estimated_scope}"
+  },
+  "blocking_info": {
+    "stage": "{실패 단계: repository_setup | codebase_analysis | test_writing | code_writing | local_validation | pr_creation | ci_validation}",
+    "reason": "{에러 메시지 또는 실패 사유}",
+    "attempted_actions": ["{실패 전 시도한 작업들}"],
+    "required_actions": ["{수정 제안 또는 다음 단계}"],
+    "collected_info": "{부분 결과 또는 진단 정보}"
+  }
+}
+```
+
+### Step 10: 결과 반환
 
 모든 작업 완료 후 JSON 형식으로 반환합니다.
 
@@ -241,6 +322,12 @@ prompt: "PR의 CI가 완료될 때까지 대기하고 결과를 확인해주세�
     "title": "feat: Add authentication feature",
     "ci_status": "passed"
   },
+  "linear_report": {
+    "reported": true,
+    "issue_id": "이슈 ID",
+    "new_status": "Done",
+    "comment_created": true
+  },
   "error": null
 }
 ```
@@ -302,3 +389,4 @@ gh pr close {pr_number}
 | 4 | code-writer | codebase_analysis, test_spec | 구현 파일 목록 |
 | 6 | local-test-validator | repository_path, test_commands | 검증 결과 JSON |
 | 8 | ci-validator | pr_number, max_wait | CI 결과 JSON |
+| 9 | linear-status-reporter (optional) | work_result, linear_context | 상태 업데이트 확인 JSON |

@@ -28,17 +28,11 @@ Linear 이슈를 처리하기 위해 여러 subagent를 orchestration하는 skil
 └────────┬────────┘
          │
          ▼
-┌─────────────────┐
-│   developer     │ Step 3: 실제 작업 수행
-│      OR         │
-│ general-purpose │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ linear-status-  │ Step 4: 결과 보고 (상태 및 코멘트)
-│    reporter     │
-└─────────────────┘
+┌─────────────────────────┐
+│       developer         │ Step 3: 실제 작업 수행 + 결과 보고
+│          OR             │
+│ general-purpose-wrapper │
+└─────────────────────────┘
 ```
 
 ## Workflow
@@ -89,7 +83,14 @@ Skill tool 사용:
 - skill: "developer"
 - args: "Repository: {repository_url}
   작업 내용: {agent_instructions}
-  완료 기준: {success_criteria}"
+  완료 기준: {success_criteria}
+
+  [Linear Context]
+  issue_id: {issue_id}
+  team_id: {team_id}
+  session_id: {session_id}
+  routing_decision: {routing_decision JSON}
+  work_summary: {work_summary JSON}"
 ```
 
 developer skill은 TDD 스타일 워크플로우를 수행합니다:
@@ -99,87 +100,27 @@ developer skill은 TDD 스타일 워크플로우를 수행합니다:
 4. local-test-validator로 로컬 검증
 5. PR 생성
 6. ci-validator로 CI 검증
+7. linear-status-reporter로 결과 보고
 
-**general-purpose 선택 시** (Task tool 사용):
+**general-purpose-wrapper 선택 시** (Task tool 사용):
 ```
 Task tool 사용:
-- subagent_type: "general-purpose"
+- subagent_type: "general-purpose-wrapper"
 - prompt: "다음 작업을 수행해주세요:
   작업 내용: {agent_instructions}
-  완료 기준: {success_criteria}"
+  완료 기준: {success_criteria}
+
+  [Linear Context]
+  issue_id: {issue_id}
+  team_id: {team_id}
+  session_id: {session_id}
+  routing_decision: {routing_decision JSON}
+  work_summary: {work_summary JSON}"
 ```
 
-### Step 4: Linear 상태 업데이트 및 코멘트 작성
-
-`linear-status-reporter` subagent를 호출하여 Linear 이슈를 업데이트합니다.
-
-**호출 방법**:
-```
-Task tool 사용:
-- subagent_type: "linear-status-reporter"
-- prompt: 다음 JSON 형식의 정보를 전달합니다
-```
-
-#### 성공 시 Input
-
-```json
-{
-  "issue_id": "{issue_id}",
-  "team_id": "{team_id}",
-  "session_id": "{session_id}",
-  "status": "success",
-  "routing_decision": {
-    "selected_target": "{router 결과의 selected_target}",
-    "confidence": "{router 결과의 confidence}",
-    "reasoning": "{router 결과의 reasoning}"
-  },
-  "work_summary": {
-    "task_type": "{researcher 결과의 task_type}",
-    "complexity": "{researcher 결과의 complexity}",
-    "estimated_scope": "{researcher 결과의 estimated_scope}"
-  },
-  "work_result": {
-    "executor": "{developer | general-purpose}",
-    "summary": "{executor의 작업 요약}",
-    "changes": ["{변경 사항들}"],
-    "pr_info": {
-      "url": "{PR URL}",
-      "branch": "{브랜치 이름}"
-    },
-    "verification": "{테스트/빌드 결과}"
-  }
-}
-```
-
-#### 블로킹 시 Input
-
-```json
-{
-  "issue_id": "{issue_id}",
-  "team_id": "{team_id}",
-  "session_id": "{session_id}",
-  "status": "blocked",
-  "routing_decision": {
-    "selected_target": "{router 결과의 selected_target}",
-    "confidence": "{router 결과의 confidence}",
-    "reasoning": "{router 결과의 reasoning}"
-  },
-  "work_summary": {
-    "task_type": "{researcher 결과의 task_type}",
-    "complexity": "{researcher 결과의 complexity}",
-    "estimated_scope": "{researcher 결과의 estimated_scope}"
-  },
-  "blocking_info": {
-    "stage": "{블로킹된 단계}",
-    "reason": "{블로킹 사유}",
-    "attempted_actions": ["{시도한 작업들}"],
-    "required_actions": ["{필요한 조치들}"],
-    "collected_info": "{수집된 정보 요약}"
-  }
-}
-```
-
-**기대 출력**: JSON 형식의 업데이트 결과 (`status_updated`, `comment_created`)
+general-purpose-wrapper는:
+1. general-purpose subagent로 실제 작업 수행
+2. linear-status-reporter로 결과 보고
 
 ## Error Handling
 
@@ -216,7 +157,9 @@ Task tool 사용:
 |------|-------------|------|------|
 | 1 | linear-task-researcher (subagent) | issue_id | JSON (이슈 정보, 컨텍스트) |
 | 2 | task-router (subagent) | researcher 출력 | JSON (라우팅 결정, 지시사항) |
-| 3 | developer (skill) / general-purpose (subagent) | router 지시사항 | 작업 완료 보고 (PR URL 포함) |
-| 4 | linear-status-reporter (subagent) | 작업 결과 | JSON (업데이트 확인) |
+| 3 | developer (skill) / general-purpose-wrapper (subagent) | router 지시사항 + Linear Context | 작업 완료 보고 + Linear 상태 업데이트 |
 
-**Note**: developer는 skill로 호출되며, 내부적으로 TDD 워크플로우를 수행합니다 (codebase-analyzer → test-writer → code-writer → local-test-validator → PR → ci-validator)
+**Note**:
+- developer는 skill로 호출되며, 내부적으로 TDD 워크플로우를 수행합니다 (codebase-analyzer → test-writer → code-writer → local-test-validator → PR → ci-validator → linear-status-reporter)
+- general-purpose-wrapper는 general-purpose 작업 후 linear-status-reporter를 호출합니다
+- 각 executor가 Linear Context를 받아 직접 linear-status-reporter를 호출하여 결과를 보고합니다
