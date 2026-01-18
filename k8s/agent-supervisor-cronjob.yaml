@@ -22,6 +22,46 @@ spec:
             component: job
         spec:
           restartPolicy: Never
+          volumes:
+            - name: claude-data
+              emptyDir: {}
+          initContainers:
+            - name: transcript-uploader
+              image: ghcr.io/dlddu/claude:latest
+              imagePullPolicy: Always
+              restartPolicy: Always  # Native sidecar (K8s 1.29+)
+              command:
+                - /bin/bash
+                - -c
+                - /app/k8s/transcript-uploader.sh
+              volumeMounts:
+                - name: claude-data
+                  mountPath: /root/.claude
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: agent-supervisor-secrets
+                      key: AWS_ACCESS_KEY_ID
+                      optional: true
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: agent-supervisor-secrets
+                      key: AWS_SECRET_ACCESS_KEY
+                      optional: true
+                - name: AWS_REGION
+                  valueFrom:
+                    secretKeyRef:
+                      name: agent-supervisor-secrets
+                      key: AWS_REGION
+                      optional: true
+                - name: AWS_S3_BUCKET_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: agent-supervisor-secrets
+                      key: AWS_S3_BUCKET_NAME
+                      optional: true
           containers:
             - name: agent-supervisor
               image: ghcr.io/dlddu/claude:latest
@@ -30,6 +70,9 @@ spec:
                 - /bin/bash
                 - -c
                 - /app/k8s/agent-supervisor.sh
+              volumeMounts:
+                - name: claude-data
+                  mountPath: /root/.claude
               resources:
                 requests:
                   cpu: "100m"
