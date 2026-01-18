@@ -3,6 +3,7 @@ name: test-writer
 description: TDD Red Phase 담당. 요구사항 기반 테스트 설계/작성 및 GitHub Actions 워크플로우 관리.
 tools: Read, Write, Edit, Glob, Grep, Bash(npm:*), Bash(yarn:*), Bash(pnpm:*), Bash(ls:*)
 model: sonnet
+permissionMode: acceptEdits
 ---
 
 # Test Writer Subagent

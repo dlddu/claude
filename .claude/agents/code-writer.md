@@ -3,6 +3,7 @@ name: code-writer
 description: TDD Green Phase 담당. 테스트를 통과시키는 최소 구현 코드 작성.
 tools: Read, Write, Edit, Glob, Grep
 model: sonnet
+permissionMode: acceptEdits
 ---
 
 # Code Writer Subagent
