@@ -1,7 +1,7 @@
 ---
 name: linear-task
 description: Linear 이슈에 대한 작업을 수행합니다. Subagent들을 orchestration하여 리서치, 라우팅, 실행을 자동화합니다. "태스크 작업", "이슈 처리", "Linear 작업" 요청 시 사용
-allowed-tools: mcp__linear-server__get_issue, mcp__linear-server__update_issue, mcp__linear-server__create_comment, Task, Skill, Bash, TodoWrite
+allowed-tools: mcp__linear-server__get_issue, Task, Skill, Bash, TodoWrite
 ---
 
 # Linear Task Orchestration Skill
@@ -36,7 +36,8 @@ Linear 이슈를 처리하기 위해 여러 subagent를 orchestration하는 skil
          │
          ▼
 ┌─────────────────┐
-│ Linear Comment  │ Step 4: 결과 보고
+│ linear-status-  │ Step 4: 결과 보고 (상태 및 코멘트)
+│    reporter     │
 └─────────────────┘
 ```
 
@@ -110,73 +111,75 @@ Task tool 사용:
 
 ### Step 4: Linear 상태 업데이트 및 코멘트 작성
 
-작업 결과에 따라 Linear 이슈를 업데이트합니다.
+`linear-status-reporter` subagent를 호출하여 Linear 이슈를 업데이트합니다.
 
-#### 작업 성공 시
-
-1. 이슈 상태를 **Done**으로 변경:
-   ```
-   mcp__linear-server__update_issue 사용
-   stateId: Done 상태의 ID
-   ```
-
-2. 완료 코멘트 작성 (`mcp__linear-server__create_comment` 사용):
-
-```markdown
-## 작업 완료 보고
-
-**Claude Session ID**: `{session_id}`
-**Routing Decision**: `{selected_agent}` (confidence: {confidence})
-
-### 이슈 분석 결과
-- **작업 유형**: {task_type}
-- **복잡도**: {complexity}
-- **범위**: {estimated_scope}
-
-### 수행한 작업
-{executor_subagent의 작업 보고 내용}
-
-### 변경 사항
-- {변경 내용 1}
-- {변경 내용 2}
-
-### PR 정보 (developer 사용 시)
-- PR URL: {pr_url}
-- Branch: {branch_name}
-
-### 검증 결과
-{테스트/빌드 결과}
+**호출 방법**:
+```
+Task tool 사용:
+- subagent_type: "linear-status-reporter"
+- prompt: 다음 JSON 형식의 정보를 전달합니다
 ```
 
-#### 작업 실패/블로킹 시
+#### 성공 시 Input
 
-1. 이슈 상태를 **Blocked**로 변경
-
-2. 블로킹 코멘트 작성:
-
-```markdown
-## 작업 블로킹 보고
-
-**Claude Session ID**: `{session_id}`
-**Routing Decision**: `{selected_agent}` (confidence: {confidence})
-
-### 블로킹 단계
-{researcher | router | developer | general-purpose} 단계에서 블로킹
-
-### 블로킹 사유
-{상세 사유}
-
-### 시도한 작업
-- {시도 1}
-- {시도 2}
-
-### 해결을 위해 필요한 조치
-- {조치 1}
-- {조치 2}
-
-### 수집된 정보
-{researcher가 수집한 정보 요약}
+```json
+{
+  "issue_id": "{issue_id}",
+  "team_id": "{team_id}",
+  "session_id": "{session_id}",
+  "status": "success",
+  "routing_decision": {
+    "selected_target": "{router 결과의 selected_target}",
+    "confidence": "{router 결과의 confidence}",
+    "reasoning": "{router 결과의 reasoning}"
+  },
+  "work_summary": {
+    "task_type": "{researcher 결과의 task_type}",
+    "complexity": "{researcher 결과의 complexity}",
+    "estimated_scope": "{researcher 결과의 estimated_scope}"
+  },
+  "work_result": {
+    "executor": "{developer | general-purpose}",
+    "summary": "{executor의 작업 요약}",
+    "changes": ["{변경 사항들}"],
+    "pr_info": {
+      "url": "{PR URL}",
+      "branch": "{브랜치 이름}"
+    },
+    "verification": "{테스트/빌드 결과}"
+  }
+}
 ```
+
+#### 블로킹 시 Input
+
+```json
+{
+  "issue_id": "{issue_id}",
+  "team_id": "{team_id}",
+  "session_id": "{session_id}",
+  "status": "blocked",
+  "routing_decision": {
+    "selected_target": "{router 결과의 selected_target}",
+    "confidence": "{router 결과의 confidence}",
+    "reasoning": "{router 결과의 reasoning}"
+  },
+  "work_summary": {
+    "task_type": "{researcher 결과의 task_type}",
+    "complexity": "{researcher 결과의 complexity}",
+    "estimated_scope": "{researcher 결과의 estimated_scope}"
+  },
+  "blocking_info": {
+    "stage": "{블로킹된 단계}",
+    "reason": "{블로킹 사유}",
+    "attempted_actions": ["{시도한 작업들}"],
+    "required_actions": ["{필요한 조치들}"],
+    "collected_info": "{수집된 정보 요약}"
+  }
+}
+```
+
+**기대 출력**: JSON 형식의 업데이트 결과 (`status_updated`, `comment_created`)
 
 ## Error Handling
 
@@ -214,6 +217,6 @@ Task tool 사용:
 | 1 | linear-task-researcher (subagent) | issue_id | JSON (이슈 정보, 컨텍스트) |
 | 2 | task-router (subagent) | researcher 출력 | JSON (라우팅 결정, 지시사항) |
 | 3 | developer (skill) / general-purpose (subagent) | router 지시사항 | 작업 완료 보고 (PR URL 포함) |
-| 4 | (이 skill) | 전체 결과 | Linear 코멘트 |
+| 4 | linear-status-reporter (subagent) | 작업 결과 | JSON (업데이트 확인) |
 
 **Note**: developer는 skill로 호출되며, 내부적으로 TDD 워크플로우를 수행합니다 (codebase-analyzer → test-writer → code-writer → local-test-validator → PR → ci-validator)
