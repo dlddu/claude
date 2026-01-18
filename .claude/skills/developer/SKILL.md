@@ -161,10 +161,9 @@ EOF
 **Task tool 사용**:
 ```
 subagent_type: "ci-validator"
-prompt: "PR의 CI가 완료될 때까지 대기하고 결과를 확인해주세요:
+prompt: "브랜치의 CI가 완료될 때까지 대기하고 결과를 확인해주세요:
   Repository: /tmp/{repo_name}
-  PR 번호: {pr_number}
-  최대 대기 시간: 30분"
+  브랜치: {branch_name}"
 ```
 
 **실패 시 처리**:
@@ -388,5 +387,5 @@ gh pr close {pr_number}
 | 3 | test-writer | codebase_analysis, feature_spec | 테스트 파일, 케이스 목록 |
 | 4 | code-writer | codebase_analysis, test_spec | 구현 파일 목록 |
 | 6 | local-test-validator | repository_path, test_commands | 검증 결과 JSON |
-| 8 | ci-validator | pr_number, max_wait | CI 결과 JSON |
+| 8 | ci-validator | branch | CI 결과 JSON |
 | 9 | linear-status-reporter (optional) | work_result, linear_context | 상태 업데이트 확인 JSON |
