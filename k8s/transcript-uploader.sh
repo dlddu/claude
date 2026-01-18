@@ -68,9 +68,9 @@ upload_transcript() {
 }
 
 find_and_upload_transcripts() {
-    # Find all active transcript files (modified within last 30 minutes)
+    # Find main transcript files only (exclude subagents folder)
     local transcripts
-    transcripts=$(find "$CLAUDE_DIR" -name "*.jsonl" -mmin -30 2>/dev/null || true)
+    transcripts=$(find "$CLAUDE_DIR" -path "$CLAUDE_DIR/projects/*.jsonl" ! -path "*/subagents/*" 2>/dev/null || true)
 
     if [[ -z "$transcripts" ]]; then
         log "No active transcripts found"
