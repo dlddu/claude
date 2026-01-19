@@ -30,7 +30,14 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
       "url": "{pr.url}",
       "branch": "{repository.branch}"
     },
-    "verification": "테스트: {tests.passed}/{tests.total} 통과, CI: {pr.ci_status}"
+    "verification": "테스트: {tests.passed}/{tests.total} 통과, CI: {pr.ci_status}",
+    "pr_review": {
+      "total_score": 85,
+      "requirements_coverage": 90,
+      "hardcoding_check": 80,
+      "general_quality": 83,
+      "comment_posted": true
+    }
   }
 }
 ```
@@ -115,6 +122,7 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
 - `local_validation`
 - `pr_creation`
 - `ci_validation`
+- `pr_review`
 
 ### General Purpose Workflow Stages
 - `general-purpose`

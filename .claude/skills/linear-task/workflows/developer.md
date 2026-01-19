@@ -21,7 +21,9 @@ Developer Workflow
        │
        ├─ Step 7: PR 생성
        │
-       └─ Step 8: ci-validator (최대 2회 재시도)
+       ├─ Step 8: ci-validator (최대 2회 재시도)
+       │
+       └─ Step 9: pr-reviewer (PR 리뷰)
 ```
 
 ## Input Requirements
@@ -157,6 +159,31 @@ prompt: "브랜치의 CI가 완료될 때까지 대기하고 결과를 확인해
 3. 새 commit 생성 및 push
 4. ci-validator 재호출
 
+### Step 9: pr-reviewer 호출 (PR 리뷰)
+
+CI 검증 통과 후 PR 리뷰를 수행합니다.
+
+**Task tool 사용**:
+```
+subagent_type: "pr-reviewer"
+prompt: "다음 PR에 대한 리뷰를 수행해주세요:
+  Repository: /tmp/{repo_name}
+  PR Number: {pr.number}
+  Requirements:
+    title: {issue_info.title}
+    description: {issue_info.description}
+    acceptance_criteria: {work_summary.acceptance_criteria}
+    key_requirements: {work_summary.key_requirements}
+  Session ID: {session_id}"
+```
+
+**기대 출력**: 리뷰 점수, 상세 평가, PR 코멘트 작성 여부
+
+**처리 방식**:
+- 리뷰 결과와 관계없이 워크플로우는 계속 진행합니다
+- 리뷰 점수가 60점 미만이면 warning으로 기록합니다
+- 코멘트 작성 실패 시에도 결과는 반환합니다
+
 ## Output Format
 
 워크플로우 완료 후 다음 JSON 형식으로 결과를 반환합니다:
@@ -196,6 +223,16 @@ prompt: "브랜치의 CI가 완료될 때까지 대기하고 결과를 확인해
     "ci_validation": {
       "status": "passed | failed | timeout",
       "retries": 0
+    },
+    "pr_review": {
+      "status": "completed | failed | skipped",
+      "total_score": 85,
+      "breakdown": {
+        "requirements_coverage": 90,
+        "hardcoding_check": 80,
+        "general_quality": 83
+      },
+      "comment_posted": true
     }
   },
   "changes": {
@@ -232,6 +269,7 @@ prompt: "브랜치의 CI가 완료될 때까지 대기하고 결과를 확인해
 | local-test-validator | code-writer 재호출 | 3 |
 | PR 생성 | 재시도 후 partial | 1 |
 | ci-validator | code-writer 재호출 | 2 |
+| pr-reviewer | 결과 기록, 워크플로우 계속 | 0 |
 
 ### Rollback 전략
 
