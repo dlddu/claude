@@ -15,11 +15,12 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv
     && ./aws/install \
     && rm -rf awscliv2.zip aws
 
-# Install Claude Code CLI
-RUN curl -fsSL https://claude.ai/install.sh | bash
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs
 
-# Add claude to PATH
-ENV PATH="/root/.local/bin:${PATH}"
+# Install Claude Code CLI
+RUN npm install -g @anthropic-ai/claude-code
 
 # Set working directory
 WORKDIR /app
