@@ -1,7 +1,7 @@
 ---
 name: linear-task
 description: Linear 이슈에 대한 작업을 수행합니다. Subagent들을 orchestration하여 리서치, 라우팅, 실행을 자동화합니다. "태스크 작업", "이슈 처리", "Linear 작업" 요청 시 사용
-allowed-tools: mcp__linear-server__get_issue, Task, Skill, Bash, TodoWrite
+allowed-tools: mcp__linear-server__get_issue, Task, Skill, Bash, TodoWrite, WebSearch
 ---
 
 # Linear Task Orchestration Skill
