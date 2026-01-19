@@ -1,7 +1,7 @@
 ---
 name: linear-plan
 description: Linear 이슈에 대한 작업 계획을 수립하고 sub-task를 생성합니다. "이슈 계획", "작업 분할", "sub-task 생성" 요청 시 사용
-allowed-tools: mcp__linear-server__*, Read, Glob, Grep, Bash, Task
+allowed-tools: mcp__linear-server__get_issue, mcp__linear-server__create_issue, mcp__linear-server__create_comment, Read, Glob, Grep, Bash, Task
 ---
 
 # Linear Issue Planning

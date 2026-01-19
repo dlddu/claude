@@ -1,7 +1,7 @@
 ---
 name: linear-task
 description: Linear sub-task에 대한 작업을 수행하고 상태를 업데이트합니다. "태스크 작업", "sub-task 완료" 요청 시 사용
-allowed-tools: mcp__linear-server__*, Read, Write, Edit, Glob, Grep, Bash, Task, TodoWrite
+allowed-tools: mcp__linear-server__get_issue, mcp__linear-server__update_issue, mcp__linear-server__create_comment, Read, Write, Edit, Glob, Grep, Bash, Task, TodoWrite
 ---
 
 # Linear Sub-task Execution
