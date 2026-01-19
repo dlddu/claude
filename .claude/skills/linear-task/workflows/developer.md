@@ -137,6 +137,9 @@ gh pr create --title "{PR 제목}" --body "$(cat <<'EOF'
 ## Test Plan
 {테스트 계획}
 
+## Session Info
+**Claude Session ID**: `{session_id}`
+
 ---
 Generated with Claude Code
 EOF
