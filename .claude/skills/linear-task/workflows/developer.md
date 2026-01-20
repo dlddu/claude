@@ -23,7 +23,9 @@ Developer Workflow
        │
        ├─ Step 8: ci-validator (최대 2회 재시도)
        │
-       └─ Step 9: pr-reviewer (PR 리뷰)
+       ├─ Step 9: pr-reviewer (PR 리뷰)
+       │
+       └─ Step 10: 점수 기반 자동 처리 (≥95점: 머지, <95점: partial)
 ```
 
 ## Input Requirements
@@ -182,10 +184,26 @@ prompt: "다음 PR에 대한 리뷰를 수행해주세요:
 
 **기대 출력**: 리뷰 점수, 상세 평가, PR 코멘트 작성 여부
 
-**처리 방식**:
-- 리뷰 결과와 관계없이 워크플로우는 계속 진행합니다
-- 리뷰 점수가 60점 미만이면 warning으로 기록합니다
-- 코멘트 작성 실패 시에도 결과는 반환합니다
+### Step 10: 점수 기반 자동 처리
+
+pr-reviewer의 `total_score`에 따라 자동 처리합니다.
+
+**95점 이상 (자동 머지)**:
+```bash
+cd /tmp/{repo_name}
+gh pr merge {pr_number} --squash --delete-branch
+```
+- 워크플로우 status: `completed`
+- PR이 자동으로 머지되고 브랜치가 삭제됩니다
+
+**95점 미만 (부분 완료)**:
+- 워크플로우 status: `partial`
+- PR은 열린 상태로 유지됩니다
+- 리뷰 결과를 참고하여 수동 검토가 필요합니다
+
+**머지 실패 시**:
+- 머지 충돌 등으로 실패하면 status는 `partial`로 설정
+- 실패 원인을 기록하고 워크플로우 종료
 
 ## Output Format
 
@@ -254,7 +272,9 @@ prompt: "다음 PR에 대한 리뷰를 수행해주세요:
     "url": "https://github.com/owner/repo/pull/123",
     "number": 123,
     "title": "feat: Add authentication feature",
-    "ci_status": "passed"
+    "ci_status": "passed",
+    "merged": true,
+    "merge_method": "squash"
   }
 }
 ```
@@ -272,7 +292,7 @@ prompt: "다음 PR에 대한 리뷰를 수행해주세요:
 | local-test-validator | code-writer 재호출 | 3 |
 | PR 생성 | 재시도 후 partial | 1 |
 | ci-validator | code-writer 재호출 | 2 |
-| pr-reviewer | 결과 기록, 워크플로우 계속 | 0 |
+| pr-reviewer | ≥95점 자동 머지, <95점 partial | 0 |
 
 ### Rollback 전략
 
