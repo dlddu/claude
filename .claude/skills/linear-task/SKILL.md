@@ -156,14 +156,14 @@ Task tool 사용:
 ```
 
 성공 시 → 이슈 상태를 "Done"으로, 완료 보고 코멘트 생성
-블로킹 시 → 이슈 상태를 "Blocked"로, 블로킹 보고 코멘트 생성
+블로킹 시 → 이슈 상태를 "In Review"로, 블로킹 보고 코멘트 생성
 
 ## Error Handling
 
 ### Researcher 실패 시
 - Linear API 접근 문제인지 확인
 - 이슈 ID가 올바른지 확인
-- 실패 사유와 함께 Blocked 상태로 전환
+- 실패 사유와 함께 In Review 상태로 전환
 
 ### Router 실패 시
 - researcher 출력 형식 확인
@@ -190,7 +190,7 @@ Task tool 사용:
 
 4. **Session ID 필수**: 모든 코멘트에 Session ID를 반드시 포함합니다
 
-5. **상태 관리**: 작업 시작 시 In Progress, 완료 시 Done 또는 Blocked로 변경
+5. **상태 관리**: 작업 시작 시 In Progress, 완료 시 Done 또는 In Review로 변경
 
 6. **에러 복구**: 가능한 경우 에러 복구를 시도하고, 불가능한 경우 명확한 보고
 

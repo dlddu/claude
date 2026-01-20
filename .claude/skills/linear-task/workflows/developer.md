@@ -285,8 +285,8 @@ gh pr merge {pr_number} --squash --delete-branch
 
 | 단계 | 실패 시 처리 | 최대 재시도 |
 |------|------------|-----------|
-| Repository 준비 | blocked 상태로 즉시 종료 | 0 |
-| codebase-analyzer | 기본 분석으로 진행, 실패 시 blocked | 0 |
+| Repository 준비 | In Review 상태로 즉시 종료 | 0 |
+| codebase-analyzer | 기본 분석으로 진행, 실패 시 In Review | 0 |
 | test-writer | 재시도 후 partial | 1 |
 | code-writer | 재시도 후 partial | 2 |
 | local-test-validator | code-writer 재호출 | 3 |
