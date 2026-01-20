@@ -1,7 +1,7 @@
 ---
 name: linear-task-researcher
 description: Linear 이슈의 정보를 수집하고 작업에 필요한 배경지식을 조사하는 리서치 에이전트. Linear 태스크 분석 및 컨텍스트 수집에 사용합니다.
-tools: mcp__linear-server__get_issue, mcp__linear-server__search_issues, mcp__linear-server__get_project, Read, Glob, Grep, WebSearch
+tools: mcp__linear-server__get_issue, mcp__linear-server__search_issues, Read, Glob, Grep, WebSearch, WebFetch
 model: sonnet
 ---
 
@@ -26,19 +26,11 @@ Linear 이슈 정보를 수집하고 작업 수행에 필요한 배경지식을 
    - 우선순위 (priority)
    - 라벨 (labels)
    - 담당자 (assignee)
-   - 프로젝트 (project) 정보
    - 부모 이슈 (parent issue) 정보
    - 하위 이슈 (sub-issues) 목록
    - 첨부된 코멘트
 
-2. 프로젝트가 있는 경우 프로젝트 상세 정보도 수집합니다:
-   - `mcp__linear-server__get_project` 사용
-   - 프로젝트 목표 및 설명
-   - 프로젝트 진행 상태
-   - 목표 완료일
-   - 전체 프로젝트 컨텍스트 파악
-
-3. 부모 이슈가 있는 경우 부모 이슈 정보도 수집합니다:
+2. 부모 이슈가 있는 경우 부모 이슈 정보도 수집합니다:
    - 전체 컨텍스트 파악
    - 관련 sub-task 목록 확인
    - 프로젝트 전체 목표 이해
@@ -94,14 +86,6 @@ Linear에서 관련 이슈를 검색합니다:
     "assignee": "담당자",
     "created_at": "생성일",
     "updated_at": "수정일"
-  },
-  "project": {
-    "id": "프로젝트 ID (없으면 null)",
-    "name": "프로젝트 이름",
-    "description": "프로젝트 설명",
-    "state": "프로젝트 상태",
-    "target_date": "목표 완료일",
-    "progress": "진행률 (0-100)"
   },
   "parent_issue": {
     "id": "부모 이슈 ID (없으면 null)",
