@@ -104,7 +104,7 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
 |------|------|
 | `issue_id` | Linear 이슈 ID |
 | `team_id` | Linear 팀 ID |
-| `session_id` | Claude Session ID (환경변수 $CLAUDE_SESSION_ID) |
+| `session_id` | Claude Session ID (string substitution `${CLAUDE_SESSION_ID}`) |
 | `status` | "success" 또는 "blocked" |
 | `routing_decision.selected_target` | "developer" 또는 "general-purpose" |
 | `routing_decision.confidence` | "high", "medium", "low" |

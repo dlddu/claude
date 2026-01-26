@@ -42,19 +42,9 @@ Linear 이슈를 처리하기 위해 여러 subagent를 orchestration하는 skil
 
 ## Workflow
 
-### Step 0: Session ID 확인 및 작업 시작 알림
+### Step 0: 작업 시작 알림
 
-#### 0.1 Session ID 확인
-
-먼저 환경 변수에서 Session ID를 확인합니다:
-
-```bash
-echo $CLAUDE_SESSION_ID
-```
-
-#### 0.2 작업 시작 코멘트 생성
-
-Session ID 확인 후, Linear 이슈에 작업 시작 코멘트를 생성합니다.
+Linear 이슈에 작업 시작 코멘트를 생성합니다.
 
 **mcp__linear-server__create_comment 도구 사용**:
 - issueId: `{issue_id}`
@@ -64,14 +54,12 @@ Session ID 확인 후, Linear 이슈에 작업 시작 코멘트를 생성합니�
 ```markdown
 ## 🚀 작업 시작
 
-**Claude Session ID**: `{session_id}`
+**Claude Session ID**: `${CLAUDE_SESSION_ID}`
 **시작 시간**: {current_timestamp}
 
 ---
 작업이 시작되었습니다. 완료 후 결과를 업데이트하겠습니다.
 ```
-
-**Session ID가 없는 경우**: "N/A (환경변수 미설정)" 사용
 
 **에러 처리**: 코멘트 생성 실패 시에도 워크플로우 계속 진행
 
