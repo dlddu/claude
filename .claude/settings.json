@@ -1,6 +1,9 @@
 {
   "permissions": {
-    "defaultMode": "dontAsk"
+    "defaultMode": "dontAsk",
+    "additionalDirectories": [
+      "/tmp"
+    ]
   },
   "model": "opus",
   "autoUpdatesChannel": "stable"
