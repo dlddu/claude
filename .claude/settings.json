@@ -3,17 +3,5 @@
     "defaultMode": "dontAsk"
   },
   "model": "opus",
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "startup",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "jq -r .session_id | xargs -I {} echo CLAUDE_SESSION_ID={} >> \"$CLAUDE_ENV_FILE\""
-          }
-        ]
-      }
-    ]
-  }
+  "autoUpdatesChannel": "stable"
 }
