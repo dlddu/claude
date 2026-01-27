@@ -46,7 +46,7 @@ get_issues_by_state() {
     local state_name="$1"
     local query=$(cat <<EOF
 {
-    "query": "query { issues(filter: { parent: { null: true }, state: { name: { eq: \\"$state_name\\" } } }, first: 1, sort: { createdAt: { order: Ascending } }) { nodes { id identifier title createdAt state { id name type } children { nodes { id identifier title createdAt state { id name type } } } } } }"
+    "query": "query { issues(filter: { parent: { null: true }, state: { name: { eq: \\"$state_name\\" } } }, first: 10, sort: { createdAt: { order: Ascending } }) { nodes { id identifier title createdAt state { id name type } children { nodes { id identifier title createdAt state { id name type } } } } } }"
 }
 EOF
 )
@@ -192,55 +192,63 @@ process_in_progress_issues() {
     log "Checking for $STATE_IN_PROGRESS issues..."
 
     local result=$(get_issues_by_state "$STATE_IN_PROGRESS")
-    local issue=$(echo "$result" | jq -r '.data.issues.nodes | sort_by(.createdAt)[0] // empty')
+    local issues=$(echo "$result" | jq -r '.data.issues.nodes | sort_by(.createdAt)')
+    local issue_count=$(echo "$issues" | jq 'length')
 
-    if [[ -z "$issue" || "$issue" == "null" ]]; then
+    if [[ "$issue_count" -eq 0 ]]; then
         log "No $STATE_IN_PROGRESS issues found"
         return 0
     fi
 
-    local issue_id=$(echo "$issue" | jq -r '.id')
-    local issue_identifier=$(echo "$issue" | jq -r '.identifier')
-    local sub_issues=$(echo "$issue" | jq -r '.children.nodes')
-    local sub_issue_count=$(echo "$sub_issues" | jq 'length')
+    log "Found $issue_count $STATE_IN_PROGRESS issues"
 
-    log "Found $STATE_IN_PROGRESS issue: $issue_identifier (ID: $issue_id)"
+    # Process each issue
+    for i in $(seq 0 $((issue_count - 1))); do
+        local issue=$(echo "$issues" | jq ".[$i]")
+        local issue_id=$(echo "$issue" | jq -r '.id')
+        local issue_identifier=$(echo "$issue" | jq -r '.identifier')
+        local sub_issues=$(echo "$issue" | jq -r '.children.nodes')
+        local sub_issue_count=$(echo "$sub_issues" | jq 'length')
 
-    if [[ "$sub_issue_count" -eq 0 ]]; then
-        log "No sub-issues found for $STATE_IN_PROGRESS issue. Skipping."
-        return 0
-    fi
+        log "Processing $STATE_IN_PROGRESS issue: $issue_identifier (ID: $issue_id)"
 
-    # Check sub-issue states
-    local in_progress_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_PROGRESS" '[.[] | select(.state.name == $state)] | length')
-    local done_count=$(echo "$sub_issues" | jq --arg state "$STATE_DONE" '[.[] | select(.state.name == $state)] | length')
-    local in_review_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_REVIEW" '[.[] | select(.state.name == $state)] | length')
-    local total_count=$sub_issue_count
+        if [[ "$sub_issue_count" -eq 0 ]]; then
+            log "No sub-issues found for $STATE_IN_PROGRESS issue $issue_identifier. Skipping."
+            continue
+        fi
 
-    log "Sub-issue stats - $STATE_IN_PROGRESS: $in_progress_count, $STATE_DONE: $done_count, $STATE_IN_REVIEW: $in_review_count, Total: $total_count"
+        # Check sub-issue states
+        local in_progress_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_PROGRESS" '[.[] | select(.state.name == $state)] | length')
+        local done_count=$(echo "$sub_issues" | jq --arg state "$STATE_DONE" '[.[] | select(.state.name == $state)] | length')
+        local in_review_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_REVIEW" '[.[] | select(.state.name == $state)] | length')
+        local total_count=$sub_issue_count
 
-    # Case b: Any sub-issue is in review
-    if [[ "$in_review_count" -gt 0 ]]; then
-        log "Found in review sub-issue. Updating issue to $STATE_IN_REVIEW..."
-        update_issue_state_by_name "$issue_id" "$STATE_IN_REVIEW"
-        return 0
-    fi
+        log "Sub-issue stats for $issue_identifier - $STATE_IN_PROGRESS: $in_progress_count, $STATE_DONE: $done_count, $STATE_IN_REVIEW: $in_review_count, Total: $total_count"
 
-    # Case c: All sub-issues are done
-    if [[ "$done_count" -eq "$total_count" ]]; then
-        log "All sub-issues done. Updating issue to $STATE_IN_REVIEW..."
-        update_issue_state_by_name "$issue_id" "$STATE_IN_REVIEW"
-        return 0
-    fi
+        # Case b: Any sub-issue is in review
+        if [[ "$in_review_count" -gt 0 ]]; then
+            log "Found in review sub-issue. Updating issue $issue_identifier to $STATE_IN_REVIEW..."
+            update_issue_state_by_name "$issue_id" "$STATE_IN_REVIEW"
+            continue
+        fi
 
-    # Case a: All sub-issues are Done or not in progress (no in-progress or in-review)
-    if [[ "$in_progress_count" -eq 0 && "$in_review_count" -eq 0 ]]; then
-        log "No sub-issues in progress. Updating issue to $STATE_BACKLOG..."
-        update_issue_state_by_name "$issue_id" "$STATE_BACKLOG"
-        return 0
-    fi
+        # Case c: All sub-issues are done
+        if [[ "$done_count" -eq "$total_count" ]]; then
+            log "All sub-issues done. Updating issue $issue_identifier to $STATE_IN_REVIEW..."
+            update_issue_state_by_name "$issue_id" "$STATE_IN_REVIEW"
+            continue
+        fi
 
-    log "In Progress issue has sub-issues still being worked on. Skipping."
+        # Case a: All sub-issues are Done or not in progress (no in-progress or in-review)
+        if [[ "$in_progress_count" -eq 0 && "$in_review_count" -eq 0 ]]; then
+            log "No sub-issues in progress. Updating issue $issue_identifier to $STATE_BACKLOG..."
+            update_issue_state_by_name "$issue_id" "$STATE_BACKLOG"
+            continue
+        fi
+
+        log "In Progress issue $issue_identifier has sub-issues still being worked on. Skipping."
+    done
+
     return 0
 }
 
