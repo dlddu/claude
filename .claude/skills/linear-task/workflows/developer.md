@@ -199,16 +199,16 @@ pr-reviewer의 `total_score`에 따라 자동 처리합니다.
 cd /tmp/{repo_name}
 gh pr merge {pr_number} --squash --delete-branch
 ```
-- 워크플로우 status: `completed`
+- 워크플로우 status: `success`
 - PR이 자동으로 머지되고 브랜치가 삭제됩니다
 
-**`AUTO_MERGE_THRESHOLD`점 미만 (부분 완료)**:
-- 워크플로우 status: `partial`
+**`AUTO_MERGE_THRESHOLD`점 미만 (블로킹)**:
+- 워크플로우 status: `blocked`
 - PR은 열린 상태로 유지됩니다
 - 리뷰 결과를 참고하여 수동 검토가 필요합니다
 
 **머지 실패 시**:
-- 머지 충돌 등으로 실패하면 status는 `partial`로 설정
+- 머지 충돌 등으로 실패하면 status는 `blocked`로 설정
 - 실패 원인을 기록하고 워크플로우 종료
 
 ## Output Format
@@ -218,8 +218,7 @@ gh pr merge {pr_number} --squash --delete-branch
 ```json
 {
   "workflow": "developer",
-  "success": true,
-  "status": "completed | partial | failed",
+  "status": "success | blocked",
   "summary": "작업 결과 한 줄 요약",
   "repository": {
     "url": "https://github.com/owner/repo",
