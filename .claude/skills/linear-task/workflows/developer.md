@@ -2,6 +2,12 @@
 
 GitHub repository에서 TDD 스타일로 개발 작업을 수행하는 워크플로우입니다.
 
+## Configuration
+
+| 설정 | 값 | 설명 |
+|------|-----|------|
+| `AUTO_MERGE_THRESHOLD` | 95 | PR 리뷰 점수가 이 값 이상이면 자동 머지 |
+
 ## Architecture
 
 ```
@@ -25,7 +31,7 @@ Developer Workflow
        │
        ├─ Step 9: pr-reviewer (PR 리뷰)
        │
-       └─ Step 10: 점수 기반 자동 처리 (≥95점: 머지, <95점: partial)
+       └─ Step 10: 점수 기반 자동 처리 (≥AUTO_MERGE_THRESHOLD: 머지)
 ```
 
 ## Input Requirements
@@ -188,7 +194,7 @@ prompt: "다음 PR에 대한 리뷰를 수행해주세요:
 
 pr-reviewer의 `total_score`에 따라 자동 처리합니다.
 
-**95점 이상 (자동 머지)**:
+**`AUTO_MERGE_THRESHOLD`점 이상 (자동 머지)**:
 ```bash
 cd /tmp/{repo_name}
 gh pr merge {pr_number} --squash --delete-branch
@@ -196,7 +202,7 @@ gh pr merge {pr_number} --squash --delete-branch
 - 워크플로우 status: `completed`
 - PR이 자동으로 머지되고 브랜치가 삭제됩니다
 
-**95점 미만 (부분 완료)**:
+**`AUTO_MERGE_THRESHOLD`점 미만 (부분 완료)**:
 - 워크플로우 status: `partial`
 - PR은 열린 상태로 유지됩니다
 - 리뷰 결과를 참고하여 수동 검토가 필요합니다
@@ -292,7 +298,7 @@ gh pr merge {pr_number} --squash --delete-branch
 | local-test-validator | code-writer 재호출 | 3 |
 | PR 생성 | 재시도 후 partial | 1 |
 | ci-validator | code-writer 재호출 | 2 |
-| pr-reviewer | ≥95점 자동 머지, <95점 partial | 0 |
+| pr-reviewer | ≥`AUTO_MERGE_THRESHOLD` 자동 머지, 미만 partial | 0 |
 
 ### Rollback 전략
 
