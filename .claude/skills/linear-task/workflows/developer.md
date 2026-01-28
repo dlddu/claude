@@ -6,7 +6,7 @@ GitHub repository에서 TDD 스타일로 개발 작업을 수행하는 워크플
 
 | 설정 | 값 | 설명 |
 |------|-----|------|
-| `AUTO_MERGE_THRESHOLD` | 95 | PR 리뷰 점수가 이 값 이상이면 자동 머지 |
+| `AUTO_MERGE_THRESHOLD` | 90 | PR 리뷰 점수가 이 값 이상이면 자동 머지 |
 
 ## Architecture
 
