@@ -221,9 +221,10 @@ process_in_progress_issues() {
         local in_progress_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_PROGRESS" '[.[] | select(.state.name == $state)] | length')
         local done_count=$(echo "$sub_issues" | jq --arg state "$STATE_DONE" '[.[] | select(.state.name == $state)] | length')
         local in_review_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_REVIEW" '[.[] | select(.state.name == $state)] | length')
+        local backlog_count=$(echo "$sub_issues" | jq --arg state "$STATE_BACKLOG" '[.[] | select(.state.name == $state)] | length')
         local total_count=$sub_issue_count
 
-        log "Sub-issue stats for $issue_identifier - $STATE_IN_PROGRESS: $in_progress_count, $STATE_DONE: $done_count, $STATE_IN_REVIEW: $in_review_count, Total: $total_count"
+        log "Sub-issue stats for $issue_identifier - $STATE_BACKLOG: $backlog_count, $STATE_IN_PROGRESS: $in_progress_count, $STATE_DONE: $done_count, $STATE_IN_REVIEW: $in_review_count, Total: $total_count"
 
         # Case b: Any sub-issue is in review
         if [[ "$in_review_count" -gt 0 ]]; then
@@ -232,16 +233,16 @@ process_in_progress_issues() {
             continue
         fi
 
-        # Case c: All sub-issues are done
-        if [[ "$done_count" -eq "$total_count" ]]; then
-            log "All sub-issues done. Updating issue $issue_identifier to $STATE_IN_REVIEW..."
+        # Case c: All sub-issues are in terminal state (no backlog, in-progress, or in-review)
+        if [[ "$in_progress_count" -eq 0 && "$in_review_count" -eq 0 && "$backlog_count" -eq 0 ]]; then
+            log "All sub-issues in terminal state. Updating issue $issue_identifier to $STATE_IN_REVIEW..."
             update_issue_state_by_name "$issue_id" "$STATE_IN_REVIEW"
             continue
         fi
 
-        # Case a: All sub-issues are Done or not in progress (no in-progress or in-review)
+        # Case a: No sub-issues in progress/review but some are still in backlog
         if [[ "$in_progress_count" -eq 0 && "$in_review_count" -eq 0 ]]; then
-            log "No sub-issues in progress. Updating issue $issue_identifier to $STATE_BACKLOG..."
+            log "Sub-issues still in backlog. Updating issue $issue_identifier to $STATE_BACKLOG..."
             update_issue_state_by_name "$issue_id" "$STATE_BACKLOG"
             continue
         fi
