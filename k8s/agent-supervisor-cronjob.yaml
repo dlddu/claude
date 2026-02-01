@@ -6,14 +6,14 @@ metadata:
     app: agent-supervisor
     component: cronjob
 spec:
-  schedule: "*/10 * * * *"  # Every 10 minutes
+  schedule: "*/5 * * * *"  # Every 5 minutes
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 200  # Allow some flexibility for scheduling
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
-      activeDeadlineSeconds: 1800  # Force terminate after 20 minutes
+      activeDeadlineSeconds: 2400  # Force terminate after 40 minutes
       backoffLimit: 0
       template:
         metadata:
