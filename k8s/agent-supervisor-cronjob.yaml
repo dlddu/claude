@@ -13,7 +13,7 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
-      activeDeadlineSeconds: 2400  # Force terminate after 40 minutes
+      activeDeadlineSeconds: 5400  # Force terminate after 90 minutes
       backoffLimit: 0
       template:
         metadata:
