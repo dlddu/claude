@@ -7,7 +7,7 @@ metadata:
     component: cronjob
 spec:
   schedule: "*/5 * * * *"  # Every 5 minutes
-  concurrencyPolicy: Forbid
+  concurrencyPolicy: Allow
   startingDeadlineSeconds: 200  # Allow some flexibility for scheduling
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
