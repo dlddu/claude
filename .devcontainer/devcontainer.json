@@ -43,10 +43,14 @@
 			"source": "${localEnv:HOME}/.config/gh",
 			"target": "/home/vscode/.config/gh",
 			"type": "bind"
+		},
+		{
+			"source": "dlddu-claude-claude",
+			"target": "/home/vscode/.claude",
+			"type": "volume"
 		}
 	],
 	"containerEnv": {
-		"CLAUDE_CONFIG_DIR": "${containerWorkspaceFolder}/.claude",
 		"SKIP_SESSION_HOOKS": "true",
 		"GH_TOKEN": ""
 	}
