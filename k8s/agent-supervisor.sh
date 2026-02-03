@@ -56,10 +56,10 @@ EOF
 # Update issue state
 update_issue_state() {
     local issue_id="$1"
-    local state_name="$2"
+    local state_id="$2"
     local query=$(cat <<EOF
 {
-    "query": "mutation { issueUpdate(id: \\"$issue_id\\", input: { stateId: \\"$state_name\\" }) { success issue { id identifier state { name } } } }"
+    "query": "mutation { issueUpdate(id: \\"$issue_id\\", input: { stateId: \\"$state_id\\" }) { success issue { id identifier state { name } } } }"
 }
 EOF
 )
