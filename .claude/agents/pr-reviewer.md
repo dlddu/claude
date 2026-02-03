@@ -112,11 +112,40 @@ gh pr diff {pr_number}
 - 20점: 심각한 품질 문제
 - 0점: 품질 기준 미달
 
+#### 3.4 바이너리 파일 포함 여부 (Binary File Check) - 감점 항목
+
+**검사 항목**:
+- 빌드 산출물 (`dist/`, `build/`, `out/` 등)
+- 컴파일된 바이너리 (`.exe`, `.dll`, `.so`, `.dylib`, `.o`, `.a`)
+- 바이트코드/클래스 파일 (`.class`, `.jar`, `.pyc`, `.pyo`, `.wasm`)
+- 압축/아카이브 파일 (`.zip`, `.tar`, `.gz`, `.rar`, `.7z`)
+- 패키지 파일 (`.deb`, `.rpm`, `.msi`, `.dmg`, `.pkg`)
+- 불필요한 미디어 파일 (테스트용이 아닌 이미지/동영상)
+- 기타: `.bin`, `.dat`, `.db`, `.sqlite` 등
+
+**탐지 방법**:
+- `gh pr diff --name-only`에서 확장자 기반 검사
+- `gh pr diff`에서 `Binary files` 패턴 확인
+- 파일 크기가 비정상적으로 큰 파일 확인
+
+**감점 기준**:
+- 0점: binary 파일 없음
+- -5점: 경미한 binary 파일 (`.pyc`, 캐시 파일 등 1-2개)
+- -10점: 빌드 산출물 또는 불필요한 binary 파일 포함
+- -20점: 대용량 binary 파일 또는 다수의 binary 파일 포함
+
+**예외 사항** (감점하지 않는 경우):
+- 테스트 fixture로 사용되는 소규모 binary 파일
+- 프로젝트에 필수적인 아이콘/favicon 등 정적 에셋
+- `.gitattributes`에서 LFS로 관리되는 파일
+
 ### Step 4: 종합 점수 계산
 
 ```
-총점 = (요구사항 반영도 × 0.4) + (하드코딩 여부 × 0.3) + (일반 코드 품질 × 0.3)
+총점 = (요구사항 반영도 × 0.4) + (하드코딩 여부 × 0.3) + (일반 코드 품질 × 0.3) + 바이너리 감점
 ```
+
+> **참고**: 바이너리 감점은 0 ~ -20점 범위이며, 총점은 최소 0점입니다.
 
 ### Step 5: PR 코멘트 작성
 
@@ -135,6 +164,7 @@ gh pr comment {pr_number} --body "$(cat <<'EOF'
 | 요구사항 반영도 | {requirements_score}/100 | 40% | {requirements_contribution} |
 | 하드코딩 여부 | {hardcoding_score}/100 | 30% | {hardcoding_contribution} |
 | 일반 코드 품질 | {quality_score}/100 | 30% | {quality_contribution} |
+| 바이너리 파일 포함 | - | 감점 | {binary_penalty} |
 
 ---
 
@@ -166,6 +196,13 @@ gh pr comment {pr_number} --body "$(cat <<'EOF'
 
 **개선 제안**:
 {improvement_suggestions}
+
+#### 4. 바이너리 파일 포함 여부 ({binary_penalty}점)
+
+{binary_feedback}
+
+**발견된 바이너리 파일**:
+{binary_findings}
 
 ---
 
@@ -221,6 +258,11 @@ EOF
         "feedback": "전반적으로 좋은 코드 품질입니다.",
         "positive_aspects": ["명확한 함수명", "적절한 에러 처리"],
         "improvement_suggestions": ["주석 추가 권장", "일부 함수 분리 고려"]
+      },
+      "binary_file_check": {
+        "penalty": 0,
+        "feedback": "바이너리 파일이 포함되어 있지 않습니다.",
+        "findings": []
       }
     },
     "overall_summary": "요구사항이 잘 반영되었고 코드 품질이 양호합니다. 일부 하드코딩 개선이 권장됩니다."
