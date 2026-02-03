@@ -8,18 +8,20 @@
 	"features": {
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
 		"ghcr.io/devcontainers/features/aws-cli:1": {},
-		"ghcr.io/devcontainers/features/node:1": {}
+		"ghcr.io/devcontainers/features/github-cli:1": {},
+		"ghcr.io/devcontainers/features/python:1": {}
 	},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "npm install -g @anthropic-ai/claude-code",
+	"postCreateCommand": "curl -fsSL https://claude.ai/install.sh | bash -s stable",
 	// Configure tool-specific properties.
 	"customizations": {
 		"vscode": {
 			"extensions": [
 				"anthropic.claude-code",
-				"github.vscode-github-actions"
+				"github.vscode-github-actions",
+				"GitHub.copilot-chat"
 			]
 		}
 	},
@@ -41,9 +43,15 @@
 			"source": "${localEnv:HOME}/.config/gh",
 			"target": "/home/vscode/.config/gh",
 			"type": "bind"
+		},
+		{
+			"source": "dlddu-claude-claude",
+			"target": "/home/vscode/.claude",
+			"type": "volume"
 		}
 	],
 	"containerEnv": {
-		"CLAUDE_CONFIG_DIR": "${containerWorkspaceFolder}/.claude"
+		"SKIP_SESSION_HOOKS": "true",
+		"GH_TOKEN": ""
 	}
 }
