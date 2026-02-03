@@ -1,16 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-# Agent Supervisor Script
-# This script monitors Linear issues and triggers appropriate actions
+# Work Checker Script
+# This script checks for Linear issues that need work and triggers agent-supervisor
 
-LOG_PREFIX="[agent-supervisor]"
+LOG_PREFIX="[work-checker]"
 
-# State name configuration (can be customized per Linear workspace)
-STATE_BACKLOG="Backlog" # 작업 대기 (main, sub issue)
-STATE_IN_PROGRESS="In Progress" # agent 작업 중 (main, sub issue)
-STATE_IN_REVIEW="In Review" # 사용자 확인 필요 (main, sub issue)
-STATE_DONE="Done" # 작업 완료 (main, sub issue)
+# State name configuration (must match agent-supervisor.sh)
+STATE_BACKLOG="Backlog"
+STATE_IN_PROGRESS="In Progress"
+STATE_IN_REVIEW="In Review"
+STATE_DONE="Done"
 
 log() {
     echo "$LOG_PREFIX $(date -u +"%Y-%m-%dT%H:%M:%SZ") $1"
@@ -22,13 +22,10 @@ log_error() {
 
 # Check required environment variables
 check_env() {
-    local required_vars=("LINEAR_API_KEY" "CLAUDE_CODE_OAUTH_TOKEN")
-    for var in "${required_vars[@]}"; do
-        if [[ -z "${!var:-}" ]]; then
-            log_error "$var is not set"
-            exit 1
-        fi
-    done
+    if [[ -z "${LINEAR_API_KEY:-}" ]]; then
+        log_error "LINEAR_API_KEY is not set"
+        exit 1
+    fi
 }
 
 # GraphQL query to Linear API
@@ -113,21 +110,7 @@ update_issue_state_by_name() {
     update_issue_state "$issue_id" "$state_id"
 }
 
-# Run claude command with slash command
-run_claude() {
-    local command="$1"
-    local issue_id="${2:-}"
-
-    log "Running claude command: $command ${issue_id:-}"
-
-    if [[ -n "$issue_id" ]]; then
-        echo "$command $issue_id" | claude -p
-    else
-        echo "$command" | claude -p
-    fi
-}
-
-# Process Backlog issues
+# Process Backlog issues (no state changes, only job creation)
 process_backlog_issues() {
     log "Checking for $STATE_BACKLOG issues..."
 
@@ -148,38 +131,23 @@ process_backlog_issues() {
 
     # Case a: No sub-issues exist
     if [[ "$sub_issue_count" -eq 0 ]]; then
-        log "No sub-issues found. Updating issue to $STATE_IN_PROGRESS and running /linear-plan..."
-        update_issue_state_by_name "$issue_id" "$STATE_IN_PROGRESS"
-        run_claude "/linear-plan" "$issue_identifier"
-        log "linear-plan completed. Updating issue to $STATE_IN_REVIEW for user review..."
-        update_issue_state_by_name "$issue_id" "$STATE_IN_REVIEW"
+        log "No sub-issues found. Creating job for linear-plan..."
+        create_job
         return 0
     fi
 
     # Check sub-issue states
     local in_progress_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_PROGRESS" '[.[] | select(.state.name == $state)] | length')
+    local in_review_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_REVIEW" '[.[] | select(.state.name == $state)] | length')
     local backlog_count=$(echo "$sub_issues" | jq --arg state "$STATE_BACKLOG" '[.[] | select(.state.name == $state)] | length')
     local done_count=$(echo "$sub_issues" | jq --arg state "$STATE_DONE" '[.[] | select(.state.name == $state)] | length')
-    local in_review_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_REVIEW" '[.[] | select(.state.name == $state)] | length')
 
     log "Sub-issue stats - $STATE_BACKLOG: $backlog_count, $STATE_IN_PROGRESS: $in_progress_count, $STATE_DONE: $done_count, $STATE_IN_REVIEW: $in_review_count"
-    # Case b: All sub-issues are Backlog or Done
+
+    # Case b: All sub-issues are Backlog or Done (no In Progress or In Review)
     if [[ "$in_progress_count" -eq 0 && "$in_review_count" -eq 0 && "$backlog_count" -gt 0 ]]; then
-        # Get first Backlog sub-issue (sorted by createdAt ascending - oldest first)
-        local first_backlog_subissue=$(echo "$sub_issues" | jq -r --arg state "$STATE_BACKLOG" '[.[] | select(.state.name == $state)] | sort_by(.createdAt)[0]')
-        local subissue_id=$(echo "$first_backlog_subissue" | jq -r '.id')
-        local subissue_identifier=$(echo "$first_backlog_subissue" | jq -r '.identifier')
-
-        log "Updating issue and sub-issue to $STATE_IN_PROGRESS..."
-
-        # Update parent issue to In Progress
-        update_issue_state_by_name "$issue_id" "$STATE_IN_PROGRESS"
-
-        # Update sub-issue to In Progress
-        update_issue_state_by_name "$subissue_id" "$STATE_IN_PROGRESS"
-
-        log "Running /linear-task for sub-issue: $subissue_identifier"
-        run_claude "/linear-task" "$subissue_identifier"
+        log "Sub-issues ready for work. Creating job for linear-task..."
+        create_job
         return 0
     fi
 
@@ -187,7 +155,7 @@ process_backlog_issues() {
     return 0
 }
 
-# Process In Progress issues
+# Process In Progress issues (state changes allowed)
 process_in_progress_issues() {
     log "Checking for $STATE_IN_PROGRESS issues..."
 
@@ -253,9 +221,22 @@ process_in_progress_issues() {
     return 0
 }
 
+# Create agent-supervisor Job from CronJob template
+create_job() {
+    local job_name="agent-supervisor-$(date +%s)"
+    log "Creating job: $job_name"
+
+    if kubectl create job "$job_name" --from=cronjob/agent-supervisor; then
+        log "Job created successfully: $job_name"
+    else
+        log_error "Failed to create job: $job_name"
+        exit 1
+    fi
+}
+
 # Main function
 main() {
-    log "Starting Agent Supervisor..."
+    log "Starting work check..."
 
     check_env
 
@@ -265,7 +246,7 @@ main() {
     # Process In Progress issues
     process_in_progress_issues
 
-    log "Agent Supervisor completed."
+    log "Work check completed"
 }
 
 main "$@"

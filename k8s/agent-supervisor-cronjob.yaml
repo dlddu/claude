@@ -6,7 +6,8 @@ metadata:
     app: agent-supervisor
     component: cronjob
 spec:
-  schedule: "*/5 * * * *"  # Every 5 minutes
+  schedule: "*/5 * * * *"  # Template for 'kubectl create job --from=cronjob/'
+  suspend: true  # Do not schedule directly - triggered by work-checker
   concurrencyPolicy: Allow
   startingDeadlineSeconds: 200  # Allow some flexibility for scheduling
   successfulJobsHistoryLimit: 3
