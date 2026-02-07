@@ -221,17 +221,47 @@ process_in_progress_issues() {
     return 0
 }
 
+# Get current namespace
+get_namespace() {
+    if [[ -f /var/run/secrets/kubernetes.io/serviceaccount/namespace ]]; then
+        cat /var/run/secrets/kubernetes.io/serviceaccount/namespace
+    else
+        echo "default"
+    fi
+}
+
 # Create agent-supervisor Job from CronJob template
 create_job() {
+    local namespace=$(get_namespace)
     local job_name="agent-supervisor-$(date +%s)"
-    log "Creating job: $job_name"
+    log "Creating job: $job_name in namespace: $namespace"
 
-    if kubectl create job "$job_name" --from=cronjob/agent-supervisor; then
+    if kubectl create job "$job_name" --from=cronjob/agent-supervisor -n "$namespace"; then
         log "Job created successfully: $job_name"
     else
         log_error "Failed to create job: $job_name"
         exit 1
     fi
+
+    # Wait for the job's pod to start
+    log "Waiting for job $job_name to start..."
+
+    while true; do
+        local pod_phase=$(kubectl get pods -l job-name="$job_name" -n "$namespace" -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "")
+
+        if [[ "$pod_phase" == "Running" ]]; then
+            log "Job $job_name is now running"
+            return 0
+        elif [[ "$pod_phase" == "Succeeded" ]]; then
+            log "Job $job_name has already completed"
+            return 0
+        elif [[ "$pod_phase" == "Failed" ]]; then
+            log_error "Job $job_name failed to start"
+            return 1
+        fi
+
+        sleep 2
+    done
 }
 
 # Main function

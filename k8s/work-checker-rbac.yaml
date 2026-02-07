@@ -19,6 +19,9 @@ rules:
   - apiGroups: ["batch"]
     resources: ["jobs"]
     verbs: ["create"]  # Required to create jobs
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list"]  # Required to check job pod status
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
