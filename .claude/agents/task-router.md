@@ -33,6 +33,16 @@ model: haiku
 
 **키워드 힌트**: implement, fix, bug, feature, refactor, code, test, build, deploy, PR, pull request, commit, merge, branch
 
+### → Mac Developer Skill (`/mac-developer`)
+
+`developer`와 동일한 조건이지만, 다음 중 하나에 해당하면 `mac-developer`를 선택합니다:
+
+- 이슈 라벨에 "mac", "mac-developer", "no-local-test" 가 포함된 경우
+- 이슈 설명에 로컬 테스트를 건너뛰라는 지시가 있는 경우
+- 로컬 테스트 환경이 없거나 사용할 수 없는 경우
+
+`mac-developer`는 `developer`와 동일한 TDD 워크플로우를 따르되, **로컬 테스트 검증(local-test-validator) 단계를 제외**합니다. CI를 통해서만 테스트를 검증합니다.
+
 ### → General Purpose Subagent
 
 다음 조건에 해당하면 `general-purpose`를 선택합니다 (Task tool로 호출):
@@ -73,7 +83,7 @@ model: haiku
 ```json
 {
   "routing_decision": {
-    "selected_target": "developer" | "general-purpose",
+    "selected_target": "developer" | "mac-developer" | "general-purpose",
     "target_type": "skill" | "subagent",
     "confidence": "high" | "medium" | "low",
     "reasoning": "선택 이유 설명"
