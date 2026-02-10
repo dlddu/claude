@@ -35,13 +35,26 @@ model: haiku
 
 ### → Mac Developer Skill (`/mac-developer`)
 
-`developer`와 동일한 조건이지만, 다음 중 하나에 해당하면 `mac-developer`를 선택합니다:
+코드 변경이 필요한 작업(developer 조건 해당) 중, **macOS 기반 프레임워크/플랫폼 프로젝트**인 경우 `mac-developer`를 선택합니다.
 
-- 이슈 라벨에 "mac", "mac-developer", "no-local-test" 가 포함된 경우
-- 이슈 설명에 로컬 테스트를 건너뛰라는 지시가 있는 경우
-- 로컬 테스트 환경이 없거나 사용할 수 없는 경우
+**판단 기준 (우선순위 순)**:
 
-`mac-developer`는 `developer`와 동일한 TDD 워크플로우를 따르되, **로컬 테스트 검증(local-test-validator) 단계를 제외**합니다. CI를 통해서만 테스트를 검증합니다.
+1. **메인 이슈의 repository 확인 (최우선)**: 이슈에 연결된 repository가 macOS/Apple 플랫폼 프로젝트인지 확인
+2. **프로젝트 기술 스택 확인**: repository의 주요 언어/프레임워크가 macOS 네이티브 기반인지 확인
+3. **이슈 라벨/설명 확인**: 이슈 라벨이나 설명에 mac 관련 키워드가 있는지 확인
+
+**macOS 프로젝트로 판단하는 조건** (하나라도 해당 시):
+
+- Swift, Objective-C 기반 프로젝트
+- Xcode 프로젝트 (`.xcodeproj`, `.xcworkspace`, `Package.swift`)
+- Apple 프레임워크 사용: SwiftUI, UIKit, AppKit, Cocoa, Core Data, Combine, Metal 등
+- iOS/macOS/watchOS/tvOS/visionOS 앱 프로젝트
+- CocoaPods (`Podfile`), Carthage (`Cartfile`), Swift Package Manager 의존성 관리
+- `.swift`, `.m`, `.mm`, `.storyboard`, `.xib` 파일이 주요 소스인 경우
+
+**키워드 힌트**: Swift, Objective-C, Xcode, SwiftUI, UIKit, AppKit, Cocoa, iOS, macOS, watchOS, tvOS, visionOS, SPM, CocoaPods, Carthage, xcodeproj, xcworkspace
+
+`mac-developer`는 `developer`와 동일한 TDD 워크플로우를 따르되, **로컬 테스트 검증(local-test-validator) 단계를 제외**합니다. macOS 네이티브 프로젝트는 로컬 테스트 실행에 Xcode/macOS 환경이 필요하므로 CI를 통해서만 검증합니다.
 
 ### → General Purpose Subagent
 
@@ -72,7 +85,13 @@ model: haiku
 - 코드 변경 필요 여부를 판단합니다
 - Repository 작업 필요 여부를 확인합니다
 
-### Step 3: 라우팅 결정
+### Step 3: macOS 프로젝트 판별 (코드 변경 작업인 경우)
+
+코드 변경이 필요한 작업으로 판단된 경우, **메인 이슈에 연결된 repository**를 우선 확인하여 macOS/Apple 플랫폼 프로젝트인지 판별합니다:
+- repository URL, 이슈 설명, 라벨에서 기술 스택 키워드를 확인합니다
+- macOS 프로젝트이면 → `mac-developer`, 아니면 → `developer`
+
+### Step 4: 라우팅 결정
 
 위 분석을 바탕으로 적절한 에이전트를 선택합니다.
 
