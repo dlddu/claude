@@ -28,12 +28,14 @@ Linear 이슈를 처리하기 위해 여러 subagent를 orchestration하는 skil
 └────────┬────────┘
          │
          ▼
-┌──────────────────────────────┐
-│  워크플로우 분기 실행          │ Step 3: Progressive Disclosure
-│  ├─ workflows/developer      │         라우팅 결정에 따라 해당 파일만 로드
-│  ├─ workflows/mac-developer  │
-│  └─ workflows/general        │
-└────────┬─────────────────────┘
+┌──────────────────────────────────┐
+│  워크플로우 분기 실행              │ Step 3: Progressive Disclosure
+│  ├─ workflows/developer          │         라우팅 결정에 따라 해당 파일만 로드
+│  ├─ workflows/developer-e2e-test │  (variant: e2e-test)
+│  ├─ workflows/developer-impl    │  (variant: implementation)
+│  ├─ workflows/mac-developer      │
+│  └─ workflows/general            │
+└────────┬─────────────────────────┘
          │
          ▼
 ┌─────────────────────────┐
@@ -99,13 +101,50 @@ router의 `routing_decision.selected_target`에 따라 해당 워크플로우 �
 
 #### "developer" 선택 시
 
+`routing_decision.workflow_variant` 값에 따라 로드할 워크플로우를 결정합니다:
+
+##### workflow_variant: "e2e-test"
+
+1. **워크플로우 파일 로드**:
+   ```
+   Read tool 사용:
+   - file_path: "{skill_directory}/workflows/developer-e2e-test.md"
+   ```
+
+2. **워크플로우 실행**: developer-e2e-test.md의 지침에 따라 E2E 테스트 작성 워크플로우 수행
+   - Repository 준비
+   - codebase-analyzer → test-writer (E2E Skip Mode) 순차 호출
+   - PR 생성
+   - ci-validator (최대 2회 재시도)
+
+3. **결과 수집**: 워크플로우 완료 후 결과 JSON 구성
+
+##### workflow_variant: "implementation"
+
+1. **워크플로우 파일 로드**:
+   ```
+   Read tool 사용:
+   - file_path: "{skill_directory}/workflows/developer-impl.md"
+   ```
+
+2. **워크플로우 실행**: developer-impl.md의 지침에 따라 TDD + E2E 활성화 워크플로우 수행
+   - Repository 준비
+   - codebase-analyzer → test-writer (Unit/Integration Only) → code-writer → E2E 활성화 (code-writer) 순차 호출
+   - local-test-validator (최대 3회 재시도)
+   - PR 생성
+   - ci-validator (최대 2회 재시도)
+
+3. **결과 수집**: 워크플로우 완료 후 결과 JSON 구성
+
+##### workflow_variant: null (기본값)
+
 1. **워크플로우 파일 로드**:
    ```
    Read tool 사용:
    - file_path: "{skill_directory}/workflows/developer.md"
    ```
 
-2. **워크플로우 실행**: developer.md의 지침에 따라 TDD 워크플로우 수행
+2. **워크플로우 실행**: 기존 developer.md의 지침에 따라 TDD 워크플로우 수행
    - Repository 준비
    - codebase-analyzer → test-writer → code-writer 순차 호출
    - local-test-validator (최대 3회 재시도)
@@ -212,11 +251,13 @@ Task tool 사용:
 
 ```
 linear-task/
-├── SKILL.md                  # 이 파일 (오케스트레이터)
+├── SKILL.md                      # 이 파일 (오케스트레이터)
 ├── workflows/
-│   ├── developer.md          # TDD 개발 워크플로우
-│   ├── mac-developer.md      # TDD 개발 워크플로우 (로컬 테스트 제외)
-│   └── general-purpose.md    # 일반 작업 워크플로우
+│   ├── developer.md              # 기본 TDD 개발 워크플로우
+│   ├── developer-e2e-test.md     # E2E 테스트 작성 워크플로우 (skip 상태)
+│   ├── developer-impl.md         # 구현 + E2E 활성화 워크플로우
+│   ├── mac-developer.md          # TDD 개발 워크플로우 (로컬 테스트 제외)
+│   └── general-purpose.md        # 일반 작업 워크플로우
 └── common/
-    └── linear-report-format.md  # 보고 형식 템플릿
+    └── linear-report-format.md   # 보고 형식 템플릿
 ```

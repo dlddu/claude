@@ -42,6 +42,94 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
 }
 ```
 
+### 성공 시 (Developer E2E Test Workflow)
+
+```json
+{
+  "issue_id": "{issue_id}",
+  "team_id": "{team_id}",
+  "session_id": "{session_id}",
+  "status": "success",
+  "routing_decision": {
+    "selected_target": "developer",
+    "workflow_variant": "e2e-test",
+    "confidence": "{routing_decision.confidence}",
+    "reasoning": "{routing_decision.reasoning}"
+  },
+  "work_summary": {
+    "task_type": "{work_summary.task_type}",
+    "complexity": "{work_summary.complexity}",
+    "estimated_scope": "{work_summary.estimated_scope}"
+  },
+  "work_result": {
+    "executor": "developer-e2e-test",
+    "summary": "{작업 요약}",
+    "changes": ["{e2e test files created}"],
+    "pr_info": {
+      "url": "{pr.url}",
+      "branch": "{repository.branch}"
+    },
+    "verification": "CI: {pr.ci_status} (all e2e tests skipped)",
+    "e2e_tests": {
+      "total": 8,
+      "skipped": 8,
+      "type": "e2e"
+    },
+    "pr_review": {
+      "total_score": 92,
+      "requirements_coverage": 95,
+      "test_quality": 90,
+      "hardcoding_check": 88,
+      "comment_posted": true
+    }
+  }
+}
+```
+
+### 성공 시 (Developer Implementation Workflow)
+
+```json
+{
+  "issue_id": "{issue_id}",
+  "team_id": "{team_id}",
+  "session_id": "{session_id}",
+  "status": "success",
+  "routing_decision": {
+    "selected_target": "developer",
+    "workflow_variant": "implementation",
+    "confidence": "{routing_decision.confidence}",
+    "reasoning": "{routing_decision.reasoning}"
+  },
+  "work_summary": {
+    "task_type": "{work_summary.task_type}",
+    "complexity": "{work_summary.complexity}",
+    "estimated_scope": "{work_summary.estimated_scope}"
+  },
+  "work_result": {
+    "executor": "developer-impl",
+    "summary": "{작업 요약}",
+    "changes": ["{files_created}", "{files_modified}"],
+    "pr_info": {
+      "url": "{pr.url}",
+      "branch": "{repository.branch}"
+    },
+    "verification": "테스트: {tests.passed}/{tests.total} 통과, CI: {pr.ci_status}",
+    "e2e_activation": {
+      "activated_count": 8,
+      "files_modified": ["tests/e2e/feature.e2e.test.ts"]
+    },
+    "pr_review": {
+      "total_score": 85,
+      "requirements_coverage": 90,
+      "hardcoding_check": 80,
+      "general_quality": 83,
+      "e2e_activation_penalty": 0,
+      "comment_posted": true
+    }
+  }
+}
+```
+
 ### 성공 시 (General Purpose Workflow)
 
 ```json
@@ -106,7 +194,8 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
 | `team_id` | Linear 팀 ID |
 | `session_id` | Claude Session ID (string substitution `${CLAUDE_SESSION_ID}`) |
 | `status` | "success" 또는 "blocked" |
-| `routing_decision.selected_target` | "developer" 또는 "general-purpose" |
+| `routing_decision.selected_target` | "developer", "mac-developer" 또는 "general-purpose" |
+| `routing_decision.workflow_variant` | "e2e-test", "implementation" 또는 null (developer만 해당) |
 | `routing_decision.confidence` | "high", "medium", "low" |
 | `work_result.executor` | 실행한 워크플로우 유형 |
 | `work_result.pr_info` | PR 정보 (developer만 해당, general-purpose는 null) |
@@ -119,6 +208,25 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
 - `codebase_analysis`
 - `test_writing`
 - `code_writing`
+- `local_validation`
+- `pr_creation`
+- `ci_validation`
+- `pr_review`
+
+### Developer E2E Test Workflow Stages
+- `repository_setup`
+- `codebase_analysis`
+- `e2e_test_writing`
+- `pr_creation`
+- `ci_validation`
+- `pr_review`
+
+### Developer Implementation Workflow Stages
+- `repository_setup`
+- `codebase_analysis`
+- `test_writing`
+- `code_writing`
+- `e2e_activation`
 - `local_validation`
 - `pr_creation`
 - `ci_validation`

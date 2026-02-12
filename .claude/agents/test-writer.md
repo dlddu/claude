@@ -54,6 +54,37 @@ codebase-analyzer의 분석 결과를 참고하여:
 - AAA 패턴 사용 (Arrange, Act, Assert)
 - 테스트 간 독립성 유지
 
+### Step 4.5: E2E Skip Mode (Orchestrator 지시에 따라)
+
+orchestrator가 E2E Skip Mode를 지시한 경우, 다음 절차를 따릅니다:
+
+1. **E2E 테스트만 작성합니다** (unit/integration 테스트 제외)
+2. **모든 테스트를 skip 상태로 작성합니다**:
+   - Jest/Vitest: `describe.skip('Feature Name', () => { ... })` 또는 `test.skip('should ...', () => { ... })`
+   - Playwright: `test.skip('should ...', async ({ page }) => { ... })`
+   - Cypress: `it.skip('should ...', () => { ... })`
+   - pytest: `@pytest.mark.skip(reason="Pending implementation: ISSUE-123")`
+   - Go: `t.Skip("Pending implementation: ISSUE-123")`
+3. **각 skip 테스트에 reason 주석을 포함합니다**:
+   ```typescript
+   // TODO: Activate when ISSUE-123 is implemented
+   test.skip('should display user profile after login', async ({ page }) => {
+     // Test implementation here
+   });
+   ```
+4. **테스트는 skip 제거 시 바로 실행 가능해야 합니다**:
+   - import 구문 정확
+   - fixture/setup 올바르게 구성
+   - 페이지 URL, 선택자 등 최대한 현실적으로 작성
+
+### Step 4.6: Unit/Integration Only Mode (Orchestrator 지시에 따라)
+
+orchestrator가 unit/integration only mode를 지시한 경우:
+
+1. **E2E 테스트는 작성하지 않습니다** (이미 별도 워크플로우에서 skip 상태로 작성되어 있음)
+2. **unit test와 integration test만 작성합니다**
+3. 나머지는 기존 Step 3~4 절차와 동일합니다
+
 ### Step 5: GitHub Actions 워크플로우 확인/수정
 
 1. `.github/workflows/` 디렉토리를 확인합니다
@@ -78,6 +109,7 @@ codebase-analyzer의 분석 결과를 참고하여:
 ```json
 {
   "success": true,
+  "mode": "standard | e2e-skip | unit-integration-only",
   "tests_created": [
     {
       "file": "테스트 파일 경로",
