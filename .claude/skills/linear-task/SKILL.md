@@ -113,7 +113,7 @@ router의 `routing_decision.selected_target`에 따라 해당 워크플로우 �
 
 2. **워크플로우 실행**: developer-e2e-test.md의 지침에 따라 E2E 테스트 작성 워크플로우 수행
    - Repository 준비
-   - codebase-analyzer → test-writer (E2E Skip Mode) 순차 호출
+   - codebase-analyzer → e2e-test-writer 순차 호출
    - PR 생성
    - ci-validator (최대 2회 재시도)
 
@@ -129,7 +129,7 @@ router의 `routing_decision.selected_target`에 따라 해당 워크플로우 �
 
 2. **워크플로우 실행**: developer-impl.md의 지침에 따라 TDD + E2E 활성화 워크플로우 수행
    - Repository 준비
-   - codebase-analyzer → test-writer (Unit/Integration Only) → code-writer → E2E 활성화 (code-writer) 순차 호출
+   - codebase-analyzer → test-writer → code-writer → E2E 활성화 (code-writer) 순차 호출
    - local-test-validator (최대 3회 재시도)
    - PR 생성
    - ci-validator (최대 2회 재시도)

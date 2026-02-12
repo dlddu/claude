@@ -18,7 +18,7 @@ Developer E2E Test Workflow
        │
        ├─ Step 2: codebase-analyzer
        │
-       ├─ Step 3: test-writer (E2E Skip Mode)
+       ├─ Step 3: e2e-test-writer
        │
        ├─ Step 4: Commit 생성
        │
@@ -70,23 +70,17 @@ prompt: "다음 repository의 코드베이스를 분석해주세요:
 
 **기대 출력**: 프로젝트 정보, 디렉토리 구조, 테스트 구조, E2E 테스트 패턴
 
-### Step 3: test-writer 호출 (E2E Skip Mode)
+### Step 3: e2e-test-writer 호출
 
 **Task tool 사용**:
 ```
-subagent_type: "test-writer"
-prompt: "다음 기능에 대한 E2E 테스트를 **skip 상태로** 작성해주세요:
+subagent_type: "e2e-test-writer"
+prompt: "다음 기능에 대한 E2E 테스트를 skip 상태로 작성해주세요:
   Repository: /tmp/{repo_name}
   코드베이스 분석: {codebase_analysis}
   기능 요구사항: {feature_spec}
   완료 기준: {acceptance_criteria}
-
-  **E2E Skip Mode 지침**:
-  1. E2E 테스트만 작성합니다 (unit/integration 테스트 제외)
-  2. 모든 테스트를 skip 상태로 작성합니다 (describe.skip, it.skip, test.skip 등)
-  3. 각 테스트에 skip reason 주석 포함 (Linear 이슈 참조)
-  4. 테스트 구조는 skip 제거 시 바로 실행 가능한 상태여야 합니다
-  5. import 구문, fixture, setup 모두 올바르게 작성"
+  Linear 이슈: {issue_info}"
 ```
 
 **기대 출력**: E2E 테스트 파일, skip된 테스트 케이스 목록
@@ -144,7 +138,7 @@ prompt: "브랜치의 CI가 완료될 때까지 대기하고 결과를 확인해
 
 **실패 시 처리 (최대 2회 재시도)**:
 1. 실패 원인 분석
-2. **test-writer 재호출**하여 수정 (구현 코드가 없으므로 code-writer가 아닌 test-writer를 호출)
+2. **e2e-test-writer 재호출**하여 수정 (구현 코드가 없으므로 code-writer가 아닌 e2e-test-writer를 호출)
 3. 새 commit 생성 및 push
 4. ci-validator 재호출
 
@@ -271,9 +265,9 @@ gh pr merge {pr_number} --squash --delete-branch
 |------|------------|-----------|
 | Repository 준비 | In Review 상태로 즉시 종료 | 0 |
 | codebase-analyzer | 기본 분석으로 진행, 실패 시 In Review | 0 |
-| test-writer | 재시도 후 partial | 1 |
+| e2e-test-writer | 재시도 후 partial | 1 |
 | PR 생성 | 재시도 후 partial | 1 |
-| ci-validator | test-writer 재호출 | 2 |
+| ci-validator | e2e-test-writer 재호출 | 2 |
 | pr-reviewer | ≥`AUTO_MERGE_THRESHOLD` 자동 머지, 미만 partial | 0 |
 
 ### Rollback 전략

@@ -79,15 +79,11 @@ prompt: "다음 repository의 코드베이스를 분석해주세요:
 **Task tool 사용**:
 ```
 subagent_type: "test-writer"
-prompt: "다음 기능에 대한 **unit 및 integration 테스트만** 작성해주세요:
+prompt: "다음 기능에 대한 테스트를 작성해주세요:
   Repository: /tmp/{repo_name}
   코드베이스 분석: {codebase_analysis}
   기능 요구사항: {feature_spec}
-  완료 기준: {acceptance_criteria}
-
-  **주의**: E2E 테스트는 작성하지 마세요.
-  이미 별도 워크플로우에서 skip 상태로 작성되어 있습니다.
-  unit test와 integration test만 작성합니다."
+  완료 기준: {acceptance_criteria}"
 ```
 
 **기대 출력**: 생성된 테스트 파일, 테스트 케이스 목록, GitHub Actions 변경사항
@@ -402,8 +398,7 @@ gh pr close {pr_number}
 
 1. **TDD 원칙 준수**: 테스트를 먼저 작성하고, 테스트 통과를 위한 최소 구현
 2. **E2E 테스트 활성화 필수**: skip된 관련 e2e 테스트가 있으면 반드시 활성화해야 합니다 (미활성화 시 리뷰에서 -100점)
-3. **Unit/Integration만 작성**: test-writer는 e2e 테스트를 작성하지 않습니다 (이미 존재)
-4. **순차적 Subagent 호출**: Subagent는 다른 subagent를 호출할 수 없음
+3. **순차적 Subagent 호출**: Subagent는 다른 subagent를 호출할 수 없음
 5. **컨텍스트 전달**: 각 단계의 출력을 다음 단계에 완전히 전달
 6. **기존 패턴 존중**: 프로젝트의 기존 코드 스타일과 패턴 따르기
 7. **새 브랜치 작업**: main/master에 직접 push 금지
