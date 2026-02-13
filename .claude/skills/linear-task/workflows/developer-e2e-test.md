@@ -180,24 +180,18 @@ prompt: "다음 PR에 대한 리뷰를 수행해주세요:
 
 ### Step 8: 점수 기반 자동 처리
 
-pr-reviewer의 `total_score`에 따라 자동 처리합니다.
+pr-reviewer의 출력에서 점수를 추출하고, 자동 머지 여부를 결정합니다.
 
-**`AUTO_MERGE_THRESHOLD`점 이상 (자동 머지)**:
-```bash
-cd /tmp/{repo_name}
-gh pr merge {pr_number} --squash --delete-branch
+**상세 절차 로드**:
 ```
-- 워크플로우 status: `success`
-- PR이 자동으로 머지되고 브랜치가 삭제됩니다
+Read tool 사용:
+- file_path: "{skill_directory}/common/score-based-auto-merge.md"
+```
 
-**`AUTO_MERGE_THRESHOLD`점 미만 (블로킹)**:
-- 워크플로우 status: `blocked`
-- PR은 열린 상태로 유지됩니다
-- 리뷰 결과를 참고하여 수동 검토가 필요합니다
-
-**머지 실패 시**:
-- 머지 충돌 등으로 실패하면 status는 `blocked`로 설정
-- 실패 원인을 기록하고 워크플로우 종료
+위 파일의 절차에 따라 실행합니다:
+1. pr-reviewer 출력 JSON에서 `review_result.total_score` 추출 (파싱 실패 시 fallback 포함)
+2. `AUTO_MERGE_THRESHOLD` (= 90) 이상이면 `gh pr merge {pr_number} --squash --delete-branch` 실행
+3. 미만이면 status를 `blocked`로 설정
 
 ## Output Format
 
