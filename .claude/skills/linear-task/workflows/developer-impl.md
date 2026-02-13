@@ -263,18 +263,18 @@ prompt: "다음 PR에 대한 리뷰를 수행해주세요:
 
 ### Step 11: 점수 기반 자동 처리
 
-pr-reviewer의 출력에서 점수를 추출하고, 자동 머지 여부를 결정합니다.
+pr-reviewer 출력을 `scripts/auto-merge.sh`에 전달하여 점수 파싱 및 머지를 실행합니다.
+스크립트가 JSON 파싱, 점수 비교, `gh pr merge --squash --delete-branch` 실행까지 모두 처리합니다.
 
-**상세 절차 로드**:
-```
-Read tool 사용:
-- file_path: "{skill_directory}/common/score-based-auto-merge.md"
+```bash
+echo '{pr_reviewer_output}' | {repository_root}/scripts/auto-merge.sh \
+  --repo /tmp/{repo_name} \
+  --pr {pr_number} \
+  --threshold 90
 ```
 
-위 파일의 절차에 따라 실행합니다:
-1. pr-reviewer 출력 JSON에서 `review_result.total_score` 추출 (파싱 실패 시 fallback 포함)
-2. `AUTO_MERGE_THRESHOLD` (= 90) 이상이면 `gh pr merge {pr_number} --squash --delete-branch` 실행
-3. 미만이면 status를 `blocked`로 설정
+스크립트 출력 JSON의 `status`, `merged`, `blocking_stage`, `blocking_reason`을 워크플로우 결과에 반영합니다.
+상세 출력 형식은 `{skill_directory}/common/score-based-auto-merge.md`를 참조합니다.
 
 ## Output Format
 
