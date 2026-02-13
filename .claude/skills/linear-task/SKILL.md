@@ -260,5 +260,9 @@ linear-task/
 │   └── general-purpose.md        # 일반 작업 워크플로우
 └── common/
     ├── linear-report-format.md   # 보고 형식 템플릿
-    └── score-based-auto-merge.md # 점수 기반 자동 머지 절차
+    └── score-based-auto-merge.md # 점수 기반 자동 머지 절차 (scripts/auto-merge.sh 호출)
+
+# 별도 위치: repository 루트
+scripts/
+└── auto-merge.sh                 # 점수 파싱 + PR 머지 실행 스크립트
 ```
