@@ -249,6 +249,7 @@ prompt: "다음 PR에 대한 리뷰를 수행해주세요:
   감점 항목 (기본 점수에서 차감):
   - 바이너리 파일 포함: 0 ~ -20점 (기존과 동일)
   - **E2E 미활성화: -100점** (관련 skip된 e2e 테스트가 존재하는데 활성화하지 않은 경우 → 자동 블로킹)
+  - **CI 미통과: -100점** (CI가 통과하지 않은 경우 → 자동 블로킹)
 
   **E2E 활성화 확인 방법**:
   - PR diff에서 skip 어노테이션이 제거되었는지 확인
@@ -336,6 +337,7 @@ gh pr merge {pr_number} --squash --delete-branch
         "general_quality": 83
       },
       "e2e_activation_penalty": 0,
+      "ci_failure_penalty": 0,
       "comment_posted": true
     }
   },
