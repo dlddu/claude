@@ -91,6 +91,33 @@ model: haiku
 - repository URL, 이슈 설명, 라벨에서 기술 스택 키워드를 확인합니다
 - macOS 프로젝트이면 → `mac-developer`, 아니면 → `developer`
 
+### Step 3.5: Developer Workflow Variant 결정 (developer 또는 mac-developer인 경우)
+
+코드 변경 작업(`developer` 또는 `mac-developer`)으로 판단된 경우, 이슈 설명과 라벨을 분석하여 워크플로우 변형을 결정합니다.
+
+#### → E2E 테스트 작성 (`workflow_variant: "e2e-test"`)
+
+다음 조건에 해당하면 `"e2e-test"` 변형을 선택합니다:
+- 이슈 설명에 e2e 테스트 작성 관련 키워드가 포함
+- 이슈 라벨에 e2e 테스트 관련 라벨이 포함
+- 작업 산출물이 테스트 코드(skip 상태)만인 경우
+
+**키워드 힌트**: e2e 테스트 작성, e2e test, end-to-end test, write test spec, test skeleton, test scaffolding, e2e skip test
+
+#### → 기능 구현 (`workflow_variant: "implementation"`)
+
+다음 조건에 해당하면 `"implementation"` 변형을 선택합니다:
+- 이슈 설명에 기능 구현/개발 관련 키워드가 포함
+- 구현과 함께 기존 skip된 e2e 테스트 활성화가 필요한 경우
+- 일반적인 코드 작성, 수정, 버그 수정 작업
+
+**키워드 힌트**: 구현, implement, develop, build, create feature, 기능 개발, activate e2e, enable tests
+
+#### → 기본값 (`workflow_variant: null`)
+
+위 조건 중 어디에도 명확히 해당하지 않으면 `workflow_variant`를 `null`로 설정합니다.
+이 경우 기존 `developer.md` 워크플로우가 사용됩니다 (하위호환).
+
 ### Step 4: 라우팅 결정
 
 위 분석을 바탕으로 적절한 에이전트를 선택합니다.
@@ -103,6 +130,7 @@ model: haiku
 {
   "routing_decision": {
     "selected_target": "developer" | "mac-developer" | "general-purpose",
+    "workflow_variant": "e2e-test" | "implementation" | null,
     "target_type": "skill" | "subagent",
     "confidence": "high" | "medium" | "low",
     "reasoning": "선택 이유 설명"

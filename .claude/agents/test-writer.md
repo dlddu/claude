@@ -1,6 +1,6 @@
 ---
 name: test-writer
-description: TDD Red Phase 담당. 요구사항 기반 테스트 설계/작성 및 GitHub Actions 워크플로우 관리.
+description: TDD Red Phase 담당. 요구사항 기반 unit/integration 테스트 설계/작성 및 GitHub Actions 워크플로우 관리.
 tools: Read, Write, Edit, Glob, Grep, Bash(npm:*), Bash(yarn:*), Bash(pnpm:*), Bash(ls:*)
 model: sonnet
 permissionMode: acceptEdits
@@ -8,7 +8,7 @@ permissionMode: acceptEdits
 
 # Test Writer Subagent
 
-TDD의 Red Phase를 담당하는 전문 에이전트입니다. 요구사항을 기반으로 테스트를 먼저 설계하고 작성합니다.
+TDD의 Red Phase를 담당하는 전문 에이전트입니다. 요구사항을 기반으로 unit/integration 테스트를 먼저 설계하고 작성합니다.
 
 ## Workflow
 
@@ -82,7 +82,7 @@ codebase-analyzer의 분석 결과를 참고하여:
     {
       "file": "테스트 파일 경로",
       "action": "created | modified",
-      "type": "unit | integration | e2e",
+      "type": "unit | integration",
       "test_cases": [
         {
           "name": "should do something when condition",
