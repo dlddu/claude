@@ -212,6 +212,7 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
 - `pr_creation`
 - `ci_validation`
 - `pr_review`
+- `auto_merge`
 
 ### Developer E2E Test Workflow Stages
 - `repository_setup`
@@ -220,6 +221,7 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
 - `pr_creation`
 - `ci_validation`
 - `pr_review`
+- `auto_merge`
 
 ### Developer Implementation Workflow Stages
 - `repository_setup`
@@ -231,6 +233,7 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
 - `pr_creation`
 - `ci_validation`
 - `pr_review`
+- `auto_merge`
 
 ### General Purpose Workflow Stages
 - `general-purpose`
