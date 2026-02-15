@@ -1,18 +1,32 @@
 # Linear Status Report Procedure
 
-워크플로우 결과를 기반으로 Linear 이슈 상태를 업데이트하고 보고 코멘트를 생성하는 절차입니다.
+linear-status-reporter subagent가 생성한 코멘트 본문과 상태 정보를 받아
+Linear API를 호출하여 이슈 상태 업데이트 및 코멘트 생성을 수행하는 절차입니다.
 `scripts/linear-status-report.sh` 스크립트를 실행하여 처리합니다.
 
 ## 스크립트 실행
 
-워크플로우 결과 JSON을 stdin으로 전달하여 스크립트를 실행합니다:
+linear-status-reporter subagent의 출력 JSON을 stdin으로 전달하여 스크립트를 실행합니다:
 
 ```bash
-echo '{report_json}' | {repository_root}/scripts/linear-status-report.sh
+echo '{reporter_output}' | {repository_root}/scripts/linear-status-report.sh
 ```
 
-> `{report_json}`은 `common/linear-report-format.md`에 정의된 형식의 JSON입니다.
+> `{reporter_output}`은 linear-status-reporter subagent가 반환한 JSON입니다.
 > `{repository_root}`는 이 repository의 루트 경로입니다 (예: `/home/user/claude`).
+
+## 스크립트 입력
+
+linear-status-reporter subagent가 생성한 JSON:
+
+```json
+{
+  "issue_id": "이슈 ID",
+  "team_id": "팀 ID",
+  "target_status": "Done | In Review",
+  "comment_body": "Markdown 코멘트 본문"
+}
+```
 
 ## 스크립트 출력
 
@@ -40,17 +54,17 @@ echo '{report_json}' | {repository_root}/scripts/linear-status-report.sh
   "issue_id": "이슈 ID",
   "status_updated": false,
   "error": "에러 메시지",
-  "error_stage": "init | status_lookup | status_update | comment_create",
+  "error_stage": "init | status_lookup | comment_create",
   "summary": "에러 요약"
 }
 ```
 
 ## 상태 매핑
 
-| 워크플로우 status | Linear 상태 |
-|---|---|
-| `success` | Done |
-| `blocked` | In Review |
+| 워크플로우 status | linear-status-reporter target_status | Linear 상태 |
+|---|---|---|
+| `success` | `Done` | Done |
+| `blocked` | `In Review` | In Review |
 
 ## 에러 처리
 

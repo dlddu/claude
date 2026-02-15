@@ -39,7 +39,12 @@ Linear 이슈를 처리하기 위해 여러 subagent를 orchestration하는 skil
          │
          ▼
 ┌──────────────────────────────┐
-│ linear-status-report.sh      │ Step 4: 결과 보고 (공통, 스크립트)
+│ linear-status-reporter       │ Step 4a: 코멘트 본문 생성 (subagent)
+└────────┬─────────────────────┘
+         │
+         ▼
+┌──────────────────────────────┐
+│ linear-status-report.sh      │ Step 4b: API 실행 (스크립트)
 └──────────────────────────────┘
 ```
 
@@ -184,8 +189,11 @@ router의 `routing_decision.selected_target`에 따라 해당 워크플로우 �
 
 ### Step 4: Linear 상태 보고 (공통)
 
-워크플로우 결과를 `scripts/linear-status-report.sh` 스크립트에 전달하여 이슈 상태 업데이트 및 코멘트 생성을 수행합니다.
-스크립트가 Linear GraphQL API를 직접 호출하여 상태 변경과 코멘트 생성을 처리합니다.
+코멘트 본문 생성(subagent)과 API 실행(스크립트) 두 단계로 나뉩니다.
+
+#### Step 4a: 코멘트 본문 생성
+
+`linear-status-reporter` subagent를 호출하여 코멘트 본문과 대상 상태를 생성합니다.
 
 **보고 형식 참조**:
 ```
@@ -193,12 +201,33 @@ Read tool 사용:
 - file_path: "{skill_directory}/common/linear-report-format.md"
 ```
 
-**스크립트 실행**:
-```bash
-echo '{report_json}' | {repository_root}/scripts/linear-status-report.sh
+**호출 방법**:
+```
+Task tool 사용:
+- subagent_type: "linear-status-reporter"
+- prompt: {JSON 형식의 결과 정보} (linear-report-format.md 참조)
 ```
 
-> `{report_json}`은 `common/linear-report-format.md`에 정의된 형식의 JSON입니다.
+**기대 출력**:
+```json
+{
+  "issue_id": "이슈 ID",
+  "team_id": "팀 ID",
+  "target_status": "Done | In Review",
+  "comment_body": "Markdown 코멘트 본문"
+}
+```
+
+#### Step 4b: Linear API 실행
+
+subagent 출력을 `scripts/linear-status-report.sh` 스크립트에 전달하여 상태 업데이트 및 코멘트 생성을 수행합니다.
+스크립트가 Linear GraphQL API를 직접 호출하여 상태 변경과 코멘트 생성을 처리합니다.
+
+```bash
+echo '{reporter_output}' | {repository_root}/scripts/linear-status-report.sh
+```
+
+> `{reporter_output}`은 Step 4a에서 linear-status-reporter subagent가 반환한 JSON입니다.
 > `{repository_root}`는 이 repository의 루트 경로입니다 (예: `/home/user/claude`).
 
 상세 출력 형식은 `{skill_directory}/common/linear-status-report.md`를 참조합니다.
@@ -249,7 +278,8 @@ echo '{report_json}' | {repository_root}/scripts/linear-status-report.sh
 | 1 | linear-task-researcher | issue_id | JSON (이슈 정보, 컨텍스트) |
 | 2 | task-router | researcher 출력 | JSON (라우팅 결정, 지시사항) |
 | 3 | 워크플로우 분기 | router 지시사항 | 작업 결과 JSON |
-| 4 | linear-status-report.sh (스크립트) | 결과 JSON (stdin) | 상태 업데이트 + 코멘트 생성 확인 |
+| 4a | linear-status-reporter | 결과 JSON | 코멘트 본문 + 대상 상태 |
+| 4b | linear-status-report.sh (스크립트) | subagent 출력 (stdin) | 상태 업데이트 + 코멘트 생성 확인 |
 
 ## File Structure
 
