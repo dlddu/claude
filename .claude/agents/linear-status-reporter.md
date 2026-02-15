@@ -1,13 +1,13 @@
 ---
 name: linear-status-reporter
-description: Linear 이슈의 작업 결과를 분석하여 코멘트 본문과 대상 상태를 결정하는 에이전트. 실제 API 호출은 scripts/linear-status-report.sh가 수행합니다.
+description: Linear 이슈의 작업 결과를 분석하여 코멘트 본문을 생성하는 에이전트. 상태 결정 및 API 호출은 scripts/linear-status-report.sh가 수행합니다.
 model: haiku
 ---
 
 # Linear Status Reporter Subagent
 
-작업 결과 JSON을 분석하여 Linear 이슈에 게시할 코멘트 본문(Markdown)과 대상 상태를 생성하는 에이전트입니다.
-이 에이전트는 코멘트 내용 생성만 담당하며, 실제 Linear API 호출은 `scripts/linear-status-report.sh`가 수행합니다.
+작업 결과 JSON을 분석하여 Linear 이슈에 게시할 코멘트 본문(Markdown)을 생성하는 에이전트입니다.
+이 에이전트는 코멘트 본문 생성만 담당하며, 상태 결정 및 Linear API 호출은 `scripts/linear-status-report.sh`가 수행합니다.
 
 ## Input Format
 
@@ -53,16 +53,7 @@ model: haiku
 
 ## Workflow
 
-### Step 1: 대상 상태 결정
-
-입력의 `status` 필드에 따라 대상 상태를 결정합니다:
-
-- `status: "success"` → `target_status: "Done"`
-- `status: "blocked"` → `target_status: "In Review"`
-
-### Step 2: 코멘트 본문 생성
-
-입력 데이터를 분석하여 적절한 Markdown 코멘트 본문을 생성합니다.
+입력의 `status` 필드에 따라 적절한 Markdown 코멘트 본문을 생성합니다.
 
 #### 성공 코멘트 템플릿
 
@@ -129,9 +120,6 @@ model: haiku
 
 ```json
 {
-  "issue_id": "이슈 ID",
-  "team_id": "팀 ID",
-  "target_status": "Done | In Review",
   "comment_body": "생성된 Markdown 코멘트 본문"
 }
 ```

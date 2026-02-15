@@ -2,17 +2,17 @@
 set -euo pipefail
 
 # linear-status-report.sh
-# linear-status-reporter subagent가 생성한 코멘트 본문과 상태 정보를 받아
-# Linear API를 호출하여 이슈 상태 업데이트 + 코멘트 생성을 수행합니다.
+# 워크플로우 결과의 status 필드를 기반으로 Linear 이슈 상태를 결정하고,
+# linear-status-reporter subagent가 생성한 코멘트 본문으로 코멘트를 생성합니다.
 #
 # 사용법:
-#   echo '<reporter_json>' | ./scripts/linear-status-report.sh
+#   echo '<script_input_json>' | ./scripts/linear-status-report.sh
 #
 # 입력 JSON (stdin):
 #   {
 #     "issue_id": "이슈 ID",
 #     "team_id": "팀 ID",
-#     "target_status": "Done | In Review",
+#     "status": "success | blocked",
 #     "comment_body": "Markdown 코멘트 본문"
 #   }
 #
@@ -39,14 +39,21 @@ INPUT=$(cat)
 # 필수 필드 파싱
 ISSUE_ID=$(echo "$INPUT" | jq -r '.issue_id // empty')
 TEAM_ID=$(echo "$INPUT" | jq -r '.team_id // empty')
-TARGET_STATE_NAME=$(echo "$INPUT" | jq -r '.target_status // empty')
+STATUS=$(echo "$INPUT" | jq -r '.status // empty')
 COMMENT_BODY=$(echo "$INPUT" | jq -r '.comment_body // empty')
 
-if [[ -z "$ISSUE_ID" || -z "$TEAM_ID" || -z "$TARGET_STATE_NAME" || -z "$COMMENT_BODY" ]]; then
+if [[ -z "$ISSUE_ID" || -z "$TEAM_ID" || -z "$STATUS" || -z "$COMMENT_BODY" ]]; then
     cat <<EOF
-{"success":false,"issue_id":"$ISSUE_ID","status_updated":false,"comment_created":false,"error":"필수 필드 누락 (issue_id, team_id, target_status, comment_body)","error_stage":"init","summary":"필수 필드 누락"}
+{"success":false,"issue_id":"$ISSUE_ID","status_updated":false,"comment_created":false,"error":"필수 필드 누락 (issue_id, team_id, status, comment_body)","error_stage":"init","summary":"필수 필드 누락"}
 EOF
     exit 1
+fi
+
+# status 기반으로 대상 상태 결정
+if [[ "$STATUS" == "success" ]]; then
+    TARGET_STATE_NAME="Done"
+else
+    TARGET_STATE_NAME="In Review"
 fi
 
 # Linear GraphQL API 호출 헬퍼

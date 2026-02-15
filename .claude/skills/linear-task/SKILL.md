@@ -193,7 +193,7 @@ router의 `routing_decision.selected_target`에 따라 해당 워크플로우 �
 
 #### Step 4a: 코멘트 본문 생성
 
-`linear-status-reporter` subagent를 호출하여 코멘트 본문과 대상 상태를 생성합니다.
+`linear-status-reporter` subagent를 호출하여 코멘트 본문을 생성합니다.
 
 **보고 형식 참조**:
 ```
@@ -211,23 +211,32 @@ Task tool 사용:
 **기대 출력**:
 ```json
 {
-  "issue_id": "이슈 ID",
-  "team_id": "팀 ID",
-  "target_status": "Done | In Review",
   "comment_body": "Markdown 코멘트 본문"
 }
 ```
 
 #### Step 4b: Linear API 실행
 
-subagent 출력을 `scripts/linear-status-report.sh` 스크립트에 전달하여 상태 업데이트 및 코멘트 생성을 수행합니다.
-스크립트가 Linear GraphQL API를 직접 호출하여 상태 변경과 코멘트 생성을 처리합니다.
+subagent가 생성한 `comment_body`와 워크플로우 결과의 `issue_id`, `team_id`, `status`를 조합하여
+`scripts/linear-status-report.sh` 스크립트에 전달합니다.
+스크립트가 `status` 필드 기반으로 대상 상태를 결정(success→Done, blocked→In Review)하고,
+Linear GraphQL API를 호출하여 상태 변경과 코멘트 생성을 처리합니다.
 
-```bash
-echo '{reporter_output}' | {repository_root}/scripts/linear-status-report.sh
+**스크립트 입력 JSON 구성**:
+```json
+{
+  "issue_id": "{워크플로우 결과의 issue_id}",
+  "team_id": "{워크플로우 결과의 team_id}",
+  "status": "{워크플로우 결과의 status (success | blocked)}",
+  "comment_body": "{Step 4a subagent가 반환한 comment_body}"
+}
 ```
 
-> `{reporter_output}`은 Step 4a에서 linear-status-reporter subagent가 반환한 JSON입니다.
+**스크립트 실행**:
+```bash
+echo '{script_input}' | {repository_root}/scripts/linear-status-report.sh
+```
+
 > `{repository_root}`는 이 repository의 루트 경로입니다 (예: `/home/user/claude`).
 
 상세 출력 형식은 `{skill_directory}/common/linear-status-report.md`를 참조합니다.
