@@ -194,14 +194,14 @@ router의 `routing_decision.selected_target`에 따라 해당 워크플로우 �
 **보고 형식 참조**:
 ```
 Read tool 사용:
-- file_path: "{skill_directory}/common/linear-report-format.md"
+- file_path: "{skill_directory}/common/report-format.md"
 ```
 
 **호출 방법**:
 ```
 Task tool 사용:
 - subagent_type: "comment-composer"
-- prompt: {JSON 형식의 결과 정보} (linear-report-format.md 참조)
+- prompt: {JSON 형식의 결과 정보} (report-format.md 참조)
 ```
 
 **기대 출력**:
@@ -298,7 +298,7 @@ linear-task/
 │   ├── mac-developer.md          # TDD 개발 워크플로우 (로컬 테스트 제외)
 │   └── general-purpose.md        # 일반 작업 워크플로우
 └── common/
-    ├── linear-report-format.md   # 보고 형식 템플릿
+    ├── report-format.md   # 보고 형식 템플릿
     ├── linear-status-report.md   # 상태 보고 절차 (scripts/linear-status-report.sh 호출)
     └── score-based-auto-merge.md # 점수 기반 자동 머지 절차 (scripts/auto-merge.sh 호출)
 
