@@ -212,7 +212,7 @@ echo "--- 그룹 1: LINEAR_API_KEY 검증 ---"
 
 # Test 1.1: LINEAR_API_KEY 미설정
 TOTAL=$((TOTAL + 1))
-output=$(unset LINEAR_API_KEY; printf '%s\n' '{"issue_id":"id","team_id":"tid","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(unset LINEAR_API_KEY; echo '{"issue_id":"id","team_id":"tid","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "LINEAR_API_KEY"; then
     PASS=$((PASS + 1))
     printf "  ✓ LINEAR_API_KEY 미설정 시 에러 반환\n"
@@ -247,7 +247,7 @@ setup
 
 # Test 2.1: 모든 필수 필드 존재 → 파싱 성공 (curl mock으로 전체 플로우)
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"test body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"test body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]]; then
     PASS=$((PASS + 1))
     printf "  ✓ 모든 필수 필드 존재 → 성공\n"
@@ -260,7 +260,7 @@ fi
 
 # Test 2.2: issue_id 누락
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ issue_id 누락 시 에러\n"
@@ -273,7 +273,7 @@ fi
 
 # Test 2.3: team_id 누락
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"iss-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ team_id 누락 시 에러\n"
@@ -286,7 +286,7 @@ fi
 
 # Test 2.4: status 누락
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"iss-1","team_id":"team-1","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","team_id":"team-1","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ status 누락 시 에러\n"
@@ -299,7 +299,7 @@ fi
 
 # Test 2.5: comment_body 누락
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"iss-1","team_id":"team-1","status":"success"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ comment_body 누락 시 에러\n"
@@ -325,7 +325,7 @@ fi
 
 # Test 2.7: 잘못된 JSON
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' 'not-a-json' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo 'not-a-json' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -ne 0 ]]; then
     PASS=$((PASS + 1))
     printf "  ✓ 잘못된 JSON 시 에러\n"
@@ -338,7 +338,7 @@ fi
 
 # Test 2.8: 빈 JSON 객체
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ 빈 JSON 객체 {} 시 필수 필드 누락 에러\n"
@@ -362,7 +362,7 @@ setup
 
 # Test 3.1: status=success → Done
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 actual_status=$(printf '%s' "$output" | jq -r '.new_status // empty' 2>/dev/null)
 if [[ "$actual_status" == "Done" ]]; then
     PASS=$((PASS + 1))
@@ -376,7 +376,7 @@ fi
 
 # Test 3.2: status=blocked → In Review
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"iss-1","team_id":"team-1","status":"blocked","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"blocked","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 actual_status=$(printf '%s' "$output" | jq -r '.new_status // empty' 2>/dev/null)
 if [[ "$actual_status" == "In Review" ]]; then
     PASS=$((PASS + 1))
@@ -390,7 +390,7 @@ fi
 
 # Test 3.3: 알 수 없는 status 값 → In Review (기본값)
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"iss-1","team_id":"team-1","status":"unknown","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"unknown","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 actual_status=$(printf '%s' "$output" | jq -r '.new_status // empty' 2>/dev/null)
 if [[ "$actual_status" == "In Review" ]]; then
     PASS=$((PASS + 1))
@@ -412,7 +412,7 @@ echo "--- 그룹 4: 성공 플로우 출력 검증 ---"
 
 setup
 
-output=$(printf '%s\n' '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"test body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"test body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 
 assert_json_field "success=true" ".success" "true" "$output"
 assert_json_field "issue_id 반환" ".issue_id" "iss-1" "$output"
@@ -435,7 +435,7 @@ setup
 create_curl_mock "states_error"
 
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q '"error_stage":"status_lookup"'; then
     PASS=$((PASS + 1))
     printf "  ✓ 상태 조회 API 에러 → error_stage=status_lookup\n"
@@ -452,7 +452,7 @@ setup
 create_curl_mock "state_not_found"
 
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "찾을 수 없습니다"; then
     PASS=$((PASS + 1))
     printf "  ✓ Done 상태 없음 → 에러\n"
@@ -469,7 +469,7 @@ setup
 create_curl_mock "comment_fail"
 
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 error_stage=$(printf '%s' "$output" | jq -r '.error_stage // empty' 2>/dev/null)
 status_updated=$(printf '%s' "$output" | jq -r '.status_updated // empty' 2>/dev/null)
 if [[ "$error_stage" == "comment_create" ]] && [[ "$status_updated" == "true" ]]; then
@@ -503,7 +503,7 @@ INPUT_JSON=$(jq -n \
     --arg body "$COMPLEX_BODY" \
     '{issue_id: $iid, team_id: $tid, status: $status, comment_body: $body}')
 
-output=$(printf '%s\n' "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
     printf "  ✓ 마크다운 + 한국어 + 이모지 comment_body 처리 성공\n"
@@ -524,7 +524,7 @@ INPUT_JSON=$(jq -n \
     --arg body "$TRICKY_BODY" \
     '{issue_id: $iid, team_id: $tid, status: $status, comment_body: $body}')
 
-output=$(printf '%s\n' "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
     printf "  ✓ JSON 특수 문자 (따옴표, 백슬래시) 처리 성공\n"
@@ -584,7 +584,7 @@ INPUT_JSON=$(jq -n \
     --arg body "$LONG_BODY" \
     '{issue_id: $iid, team_id: $tid, status: $status, comment_body: $body}')
 
-output=$(printf '%s\n' "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
     printf "  ✓ 긴 comment_body (실제 실패 사례 재현) 처리 성공\n"
@@ -600,15 +600,15 @@ teardown
 echo ""
 
 # ─────────────────────────────────────────────
-# 그룹 7: [버그 재현] printf로 직접 JSON 전달
+# 그룹 7: [버그 재현] echo로 직접 JSON 전달
 # ─────────────────────────────────────────────
-echo "--- 그룹 7: 버그 재현 - printf로 직접 JSON 전달 ---"
+echo "--- 그룹 7: 버그 재현 - echo로 직접 JSON 전달 ---"
 
 setup
 
-# Test 7.1: printf '%s\n' 으로 멀티라인 JSON 전달 (실제 호출 방식)
+# Test 7.1: echo로 멀티라인 JSON 전달 (실제 호출 방식)
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{
+output=$(echo '{
   "issue_id": "eb074673-17d9-4da2-88fc-853d3dbc3265",
   "team_id": "59d63b86-2d3d-4e18-a017-820d1c2d7e88",
   "status": "success",
@@ -616,17 +616,17 @@ output=$(printf '%s\n' '{
 }' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
-    printf "  ✓ printf로 멀티라인 JSON 전달 성공\n"
+    printf "  ✓ echo로 멀티라인 JSON 전달 성공\n"
 else
     FAIL=$((FAIL + 1))
-    FAILED_TESTS+=("printf 멀티라인 JSON")
-    printf "  ✗ printf로 멀티라인 JSON 전달\n"
+    FAILED_TESTS+=("echo 멀티라인 JSON")
+    printf "  ✗ echo로 멀티라인 JSON 전달\n"
     printf "    exit=%s output=%s\n" "$exit_code" "$(printf '%s' "$output" | head -c 300)"
 fi
 
 # Test 7.2: comment_body에 literal \n (JSON escape) 포함
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"line1\\nline2\\nline3"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"line1\\nline2\\nline3"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
     printf "  ✓ JSON escape \\\\n 포함 comment_body 처리 성공\n"
@@ -664,7 +664,7 @@ fi
 TOTAL=$((TOTAL + 1))
 # 이 테스트는 원본 커맨드의 single-quoted string에서 \n이 literal인 경우를 재현
 EXACT_CMD='{"issue_id":"eb074673","team_id":"59d63b86","status":"success","comment_body":"## 보고\\n\\n**Session**: test\\n### 결과\\n- 항목1\\n- 항목2"}'
-output=$(printf '%s\n' "$EXACT_CMD" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo "$EXACT_CMD" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]]; then
     PASS=$((PASS + 1))
     printf "  ✓ 원본 실패 사례 재현 → 성공 (jq가 \\\\n을 파싱)\n"
@@ -688,7 +688,7 @@ setup
 
 # Test 8.1: 성공 시 출력이 유효한 JSON
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if printf '%s' "$output" | jq empty 2>/dev/null; then
     PASS=$((PASS + 1))
     printf "  ✓ 성공 시 유효한 JSON 출력\n"
@@ -716,7 +716,7 @@ fi
 
 # Test 8.3: LINEAR_API_KEY 에러 시 유효한 JSON
 TOTAL=$((TOTAL + 1))
-output=$(unset LINEAR_API_KEY; printf '%s\n' '{}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(unset LINEAR_API_KEY; echo '{}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if printf '%s' "$output" | jq empty 2>/dev/null; then
     PASS=$((PASS + 1))
     printf "  ✓ API KEY 에러 시 유효한 JSON 출력\n"
@@ -738,7 +738,7 @@ setup
 
 # Test 9.1: null 값이 포함된 필드
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":null,"team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":null,"team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ null 값 필드 → 필수 필드 누락\n"
@@ -751,7 +751,7 @@ fi
 
 # Test 9.2: 빈 문자열 값
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ 빈 문자열 필드 → 필수 필드 누락\n"
@@ -764,7 +764,7 @@ fi
 
 # Test 9.3: 추가 필드가 있어도 정상 동작
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body","extra_field":"extra"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body","extra_field":"extra"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
     printf "  ✓ 추가 필드 있어도 정상 동작\n"
@@ -783,7 +783,7 @@ INPUT_JSON=$(jq -n \
     --arg status "success" \
     --arg body "It's a test with 'single quotes'" \
     '{issue_id: $iid, team_id: $tid, status: $status, comment_body: $body}')
-output=$(printf '%s\n' "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
     printf "  ✓ single quote 포함 comment_body 처리 성공\n"
@@ -829,7 +829,7 @@ EOF
 chmod +x "$MOCK_CURL"
 
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if printf '%s' "$output" | jq empty 2>/dev/null; then
     PASS=$((PASS + 1))
     printf "  ✓ API 에러 메시지에 큰따옴표 포함 → 출력 JSON 유효\n"
@@ -854,7 +854,7 @@ INPUT_JSON=$(jq -n \
     --arg status "success" \
     --arg body "body" \
     '{issue_id: $iid, team_id: $tid, status: $status, comment_body: $body}')
-output=$(printf '%s\n' "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if printf '%s' "$output" | jq empty 2>/dev/null; then
     PASS=$((PASS + 1))
     printf "  ✓ issue_id에 큰따옴표 포함 → 출력 JSON 유효 (injection 방지됨)\n"
@@ -890,7 +890,7 @@ fi
 
 # Test 11.2: null JSON ("null" 문자열)
 TOTAL=$((TOTAL + 1))
-output=$(printf 'null\n' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo 'null' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ JSON null 입력 → 필수 필드 누락\n"
@@ -915,7 +915,7 @@ fi
 
 # Test 11.4: JSON 배열 입력 (객체가 아닌)
 TOTAL=$((TOTAL + 1))
-output=$(printf '%s\n' '[{"issue_id":"iss-1"}]' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(echo '[{"issue_id":"iss-1"}]' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -ne 0 ]]; then
     PASS=$((PASS + 1))
     printf "  ✓ JSON 배열 입력 → 에러\n"
@@ -931,7 +931,7 @@ TOTAL=$((TOTAL + 1))
 diag_output=$(bash -c '
 set -euo pipefail
 INPUT=$(cat < /dev/null)
-ISSUE_ID=$(printf "%s\n" "$INPUT" | jq -r ".issue_id // empty")
+ISSUE_ID=$(echo "$INPUT" | jq -r ".issue_id // empty")
 echo "ISSUE_ID_EMPTY=$([[ -z "$ISSUE_ID" ]] && echo "yes" || echo "no")"
 ' 2>&1) && diag_exit=0 || diag_exit=$?
 if printf '%s' "$diag_output" | grep -q "ISSUE_ID_EMPTY=yes"; then
