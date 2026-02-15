@@ -43,9 +43,7 @@ STATUS=$(printf '%s\n' "$INPUT" | jq -r '.status // empty')
 COMMENT_BODY=$(printf '%s\n' "$INPUT" | jq -r '.comment_body // empty')
 
 if [[ -z "$ISSUE_ID" || -z "$TEAM_ID" || -z "$STATUS" || -z "$COMMENT_BODY" ]]; then
-    cat <<EOF
-{"success":false,"issue_id":"$ISSUE_ID","status_updated":false,"comment_created":false,"error":"필수 필드 누락 (issue_id, team_id, status, comment_body)","error_stage":"init","summary":"필수 필드 누락"}
-EOF
+    jq -nc --arg iid "$ISSUE_ID" '{success:false,issue_id:$iid,status_updated:false,comment_created:false,error:"필수 필드 누락 (issue_id, team_id, status, comment_body)",error_stage:"init",summary:"필수 필드 누락"}'
     exit 1
 fi
 
@@ -76,9 +74,7 @@ STATES_RESPONSE=$(linear_api "$STATES_QUERY")
 # 에러 확인
 if printf '%s\n' "$STATES_RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
     ERROR_MSG=$(printf '%s\n' "$STATES_RESPONSE" | jq -r '.errors[0].message // "상태 조회 실패"')
-    cat <<EOF
-{"success":false,"issue_id":"$ISSUE_ID","status_updated":false,"comment_created":false,"error":"$ERROR_MSG","error_stage":"status_lookup","summary":"Linear 상태 조회 실패: $ERROR_MSG"}
-EOF
+    jq -nc --arg iid "$ISSUE_ID" --arg err "$ERROR_MSG" '{success:false,issue_id:$iid,status_updated:false,comment_created:false,error:$err,error_stage:"status_lookup",summary:("Linear 상태 조회 실패: "+$err)}'
     exit 1
 fi
 
@@ -86,9 +82,7 @@ fi
 TARGET_STATE_ID=$(printf '%s\n' "$STATES_RESPONSE" | jq -r --arg name "$TARGET_STATE_NAME" '.data.workflowStates.nodes[] | select(.name == $name) | .id' | head -1)
 
 if [[ -z "$TARGET_STATE_ID" ]]; then
-    cat <<EOF
-{"success":false,"issue_id":"$ISSUE_ID","status_updated":false,"comment_created":false,"error":"상태 '$TARGET_STATE_NAME'을 찾을 수 없습니다","error_stage":"status_lookup","summary":"대상 상태를 찾을 수 없음"}
-EOF
+    jq -nc --arg iid "$ISSUE_ID" --arg sname "$TARGET_STATE_NAME" '{success:false,issue_id:$iid,status_updated:false,comment_created:false,error:("상태 \u0027"+$sname+"\u0027을 찾을 수 없습니다"),error_stage:"status_lookup",summary:"대상 상태를 찾을 수 없음"}'
     exit 1
 fi
 
@@ -130,13 +124,9 @@ fi
 # 코멘트 생성 실패 시 (상태 업데이트는 성공했을 수 있음)
 if [[ "$COMMENT_CREATED" == "false" ]]; then
     ERROR_MSG=$(printf '%s\n' "$COMMENT_RESPONSE" | jq -r '.errors[0].message // "코멘트 생성 실패"' 2>/dev/null || echo "코멘트 생성 실패")
-    cat <<EOF
-{"success":false,"issue_id":"$ISSUE_ID","status_updated":$STATUS_UPDATED,"new_status":"$TARGET_STATE_NAME","comment_created":false,"error":"$ERROR_MSG","error_stage":"comment_create","summary":"코멘트 생성 실패: $ERROR_MSG"}
-EOF
+    jq -nc --arg iid "$ISSUE_ID" --argjson su "$STATUS_UPDATED" --arg ns "$TARGET_STATE_NAME" --arg err "$ERROR_MSG" '{success:false,issue_id:$iid,status_updated:$su,new_status:$ns,comment_created:false,error:$err,error_stage:"comment_create",summary:("코멘트 생성 실패: "+$err)}'
     exit 0
 fi
 
 # --- 최종 결과 출력 ---
-cat <<EOF
-{"success":true,"issue_id":"$ISSUE_ID","status_updated":$STATUS_UPDATED,"new_status":"$TARGET_STATE_NAME","comment_created":true,"comment_id":"$COMMENT_ID","summary":"이슈 상태가 ${TARGET_STATE_NAME}(으)로 업데이트되고 보고 코멘트가 작성되었습니다."}
-EOF
+jq -nc --arg iid "$ISSUE_ID" --argjson su "$STATUS_UPDATED" --arg ns "$TARGET_STATE_NAME" --arg cid "$COMMENT_ID" '{success:true,issue_id:$iid,status_updated:$su,new_status:$ns,comment_created:true,comment_id:$cid,summary:("이슈 상태가 "+$ns+"(으)로 업데이트되고 보고 코멘트가 작성되었습니다.")}'
