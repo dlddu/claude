@@ -72,3 +72,13 @@ echo '{script_input}' | {skill_directory}/scripts/linear-status-report.sh
 - 스크립트 종료 코드가 1인 경우: 초기화 실패 또는 상태 조회 실패. stdout의 JSON에서 `error_stage`와 `error`를 확인합니다.
 - 상태 업데이트 실패 시에도 코멘트 생성은 시도합니다.
 - 스크립트 자체가 실행 불가한 경우: status를 `blocked`로, `blocking_info.stage`를 `linear_status_report`로 설정합니다.
+
+### 실패 시 디버그 모드 재실행
+
+첫 번째 실행에서 실패한 경우(`success`가 `false`이거나 종료 코드가 0이 아닌 경우), `DEBUG=1` 환경변수를 설정하여 동일한 입력으로 한 번 더 실행합니다:
+
+```bash
+echo '{script_input}' | DEBUG=1 {skill_directory}/scripts/linear-status-report.sh
+```
+
+디버그 모드에서는 각 단계별 상세 로그가 stderr로 출력되므로, 실패 원인을 파악하는 데 활용합니다. 디버그 재실행 결과도 실패하면 해당 stderr 로그를 참고하여 문제를 진단합니다.
