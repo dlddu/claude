@@ -196,7 +196,7 @@ pr-reviewer 출력을 `{skill_directory}/scripts/auto-merge.sh`에 전달하여 
 스크립트가 JSON 파싱, 점수 비교, `gh pr merge --squash --delete-branch` 실행까지 모두 처리합니다.
 
 ```bash
-echo '{pr_reviewer_output}' | {skill_directory}/scripts/auto-merge.sh \
+printf '%s\n' '{pr_reviewer_output}' | {skill_directory}/scripts/auto-merge.sh \
   --repo /tmp/{repo_name} \
   --pr {pr_number} \
   --threshold 90

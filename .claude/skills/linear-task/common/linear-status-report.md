@@ -9,7 +9,7 @@ Linear API를 호출하여 이슈 상태 업데이트 및 코멘트 생성을 �
 워크플로우 결과 필드와 subagent 출력을 조합한 JSON을 stdin으로 전달하여 스크립트를 실행합니다:
 
 ```bash
-echo '{script_input}' | {skill_directory}/scripts/linear-status-report.sh
+printf '%s\n' '{script_input}' | {skill_directory}/scripts/linear-status-report.sh
 ```
 
 > `{skill_directory}`는 이 스킬의 디렉토리 경로입니다.

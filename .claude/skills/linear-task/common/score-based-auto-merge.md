@@ -8,7 +8,7 @@ pr-reviewer 결과에서 점수를 파싱하고 자동 머지를 수행하는 �
 pr-reviewer subagent의 출력(JSON 텍스트)을 stdin으로 전달하여 스크립트를 실행합니다:
 
 ```bash
-echo '{pr_reviewer_output}' | {skill_directory}/scripts/auto-merge.sh \
+printf '%s\n' '{pr_reviewer_output}' | {skill_directory}/scripts/auto-merge.sh \
   --repo /tmp/{repo_name} \
   --pr {pr_number} \
   --threshold {AUTO_MERGE_THRESHOLD}
