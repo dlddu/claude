@@ -39,7 +39,7 @@ Linear 이슈를 처리하기 위해 여러 subagent를 orchestration하는 skil
          │
          ▼
 ┌──────────────────────────────┐
-│ linear-comment-composer      │ Step 4: 코멘트 본문 생성 (subagent)
+│ comment-composer      │ Step 4: 코멘트 본문 생성 (subagent)
 └────────┬─────────────────────┘
          │
          ▼
@@ -189,7 +189,7 @@ router의 `routing_decision.selected_target`에 따라 해당 워크플로우 �
 
 ### Step 4: 코멘트 본문 생성
 
-`linear-comment-composer` subagent를 호출하여 코멘트 본문을 생성합니다.
+`comment-composer` subagent를 호출하여 코멘트 본문을 생성합니다.
 
 **보고 형식 참조**:
 ```
@@ -200,7 +200,7 @@ Read tool 사용:
 **호출 방법**:
 ```
 Task tool 사용:
-- subagent_type: "linear-comment-composer"
+- subagent_type: "comment-composer"
 - prompt: {JSON 형식의 결과 정보} (linear-report-format.md 참조)
 ```
 
@@ -283,7 +283,7 @@ echo '{script_input}' | {repository_root}/scripts/linear-status-report.sh
 | 1 | linear-task-researcher | issue_id | JSON (이슈 정보, 컨텍스트) |
 | 2 | task-router | researcher 출력 | JSON (라우팅 결정, 지시사항) |
 | 3 | 워크플로우 분기 | router 지시사항 | 작업 결과 JSON |
-| 4 | linear-comment-composer | 결과 JSON | 코멘트 본문 |
+| 4 | comment-composer | 결과 JSON | 코멘트 본문 |
 | 5 | linear-status-report.sh (스크립트) | status + comment_body (stdin) | 상태 결정 + 업데이트 + 코멘트 생성 |
 
 ## File Structure

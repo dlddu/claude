@@ -1,13 +1,13 @@
 ---
-name: linear-comment-composer
-description: Linear 이슈의 작업 결과를 분석하여 코멘트 본문을 생성하는 에이전트. 상태 결정 및 API 호출은 scripts/linear-status-report.sh가 수행합니다.
+name: comment-composer
+description: 작업 결과 JSON을 분석하여 Markdown 코멘트 본문을 생성하는 에이전트. 코멘트 본문 생성만 담당합니다.
 model: haiku
 ---
 
-# Linear Comment Composer Subagent
+# Comment Composer Subagent
 
-작업 결과 JSON을 분석하여 Linear 이슈에 게시할 코멘트 본문(Markdown)을 생성하는 에이전트입니다.
-이 에이전트는 코멘트 본문 생성만 담당하며, 상태 결정 및 Linear API 호출은 `scripts/linear-status-report.sh`가 수행합니다.
+작업 결과 JSON을 분석하여 Markdown 코멘트 본문을 생성하는 에이전트입니다.
+코멘트 본문 생성만 담당하며, 상태 결정이나 API 호출은 수행하지 않습니다.
 
 ## Input Format
 
@@ -15,8 +15,6 @@ model: haiku
 
 ```json
 {
-  "issue_id": "Linear 이슈 ID",
-  "team_id": "Linear 팀 ID",
   "session_id": "Claude Session ID",
   "status": "success | blocked",
   "routing_decision": {
@@ -63,7 +61,7 @@ model: haiku
 **Claude Session ID**: `{session_id}`
 **Routing Decision**: `{selected_target}` (confidence: {confidence})
 
-### 이슈 분석 결과
+### 작업 분석 결과
 - **작업 유형**: {task_type}
 - **복잡도**: {complexity}
 - **범위**: {estimated_scope}

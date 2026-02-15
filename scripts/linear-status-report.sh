@@ -3,7 +3,7 @@ set -euo pipefail
 
 # linear-status-report.sh
 # 워크플로우 결과의 status 필드를 기반으로 Linear 이슈 상태를 결정하고,
-# linear-comment-composer subagent가 생성한 코멘트 본문으로 코멘트를 생성합니다.
+# comment-composer subagent가 생성한 코멘트 본문으로 코멘트를 생성합니다.
 #
 # 사용법:
 #   echo '<script_input_json>' | ./scripts/linear-status-report.sh
