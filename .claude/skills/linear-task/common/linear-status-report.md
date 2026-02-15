@@ -1,6 +1,6 @@
 # Linear Status Report Procedure
 
-워크플로우 결과의 `status` 필드와 linear-status-reporter subagent가 생성한 코멘트 본문을 받아
+워크플로우 결과의 `status` 필드와 linear-comment-composer subagent가 생성한 코멘트 본문을 받아
 Linear API를 호출하여 이슈 상태 업데이트 및 코멘트 생성을 수행하는 절차입니다.
 `scripts/linear-status-report.sh` 스크립트를 실행하여 처리합니다.
 

@@ -1,10 +1,10 @@
 ---
-name: linear-status-reporter
+name: linear-comment-composer
 description: Linear 이슈의 작업 결과를 분석하여 코멘트 본문을 생성하는 에이전트. 상태 결정 및 API 호출은 scripts/linear-status-report.sh가 수행합니다.
 model: haiku
 ---
 
-# Linear Status Reporter Subagent
+# Linear Comment Composer Subagent
 
 작업 결과 JSON을 분석하여 Linear 이슈에 게시할 코멘트 본문(Markdown)을 생성하는 에이전트입니다.
 이 에이전트는 코멘트 본문 생성만 담당하며, 상태 결정 및 Linear API 호출은 `scripts/linear-status-report.sh`가 수행합니다.
