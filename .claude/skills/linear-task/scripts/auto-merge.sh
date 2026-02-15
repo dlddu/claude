@@ -5,7 +5,7 @@ set -euo pipefail
 # pr-reviewer JSON을 stdin으로 받아 점수를 파싱하고, 임계값 이상이면 PR을 머지합니다.
 #
 # 사용법:
-#   echo '<pr-reviewer JSON>' | ./scripts/auto-merge.sh --repo /tmp/repo --pr 123 --threshold 90
+#   echo '<pr-reviewer JSON>' | {skill_directory}/scripts/auto-merge.sh --repo /tmp/repo --pr 123 --threshold 90
 #
 # 종료 코드:
 #   0: 정상 완료 (머지 성공 또는 블로킹 판정)
