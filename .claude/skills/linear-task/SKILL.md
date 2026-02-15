@@ -214,7 +214,7 @@ Task tool 사용:
 ### Step 5: Linear 상태 업데이트 + 코멘트 생성
 
 subagent가 생성한 `comment_body`와 워크플로우 결과의 `issue_id`, `team_id`, `status`를 조합하여
-`scripts/linear-status-report.sh` 스크립트에 전달합니다.
+`{skill_directory}/scripts/linear-status-report.sh` 스크립트에 전달합니다.
 스크립트가 `status` 필드 기반으로 대상 상태를 결정(success→Done, blocked→In Review)하고,
 Linear GraphQL API를 호출하여 상태 변경과 코멘트 생성을 처리합니다.
 
@@ -230,10 +230,10 @@ Linear GraphQL API를 호출하여 상태 변경과 코멘트 생성을 처리�
 
 **스크립트 실행**:
 ```bash
-echo '{script_input}' | {repository_root}/scripts/linear-status-report.sh
+echo '{script_input}' | {skill_directory}/scripts/linear-status-report.sh
 ```
 
-> `{repository_root}`는 이 repository의 루트 경로입니다 (예: `/home/user/claude`).
+> `{skill_directory}`는 이 스킬의 디렉토리 경로입니다.
 
 상세 출력 형식은 `{skill_directory}/common/linear-status-report.md`를 참조합니다.
 
@@ -297,13 +297,11 @@ linear-task/
 │   ├── developer-impl.md         # 구현 + E2E 활성화 워크플로우
 │   ├── mac-developer.md          # TDD 개발 워크플로우 (로컬 테스트 제외)
 │   └── general-purpose.md        # 일반 작업 워크플로우
-└── common/
-    ├── report-format.md   # 보고 형식 템플릿
-    ├── linear-status-report.md   # 상태 보고 절차 (scripts/linear-status-report.sh 호출)
-    └── score-based-auto-merge.md # 점수 기반 자동 머지 절차 (scripts/auto-merge.sh 호출)
-
-# 별도 위치: repository 루트
-scripts/
-├── auto-merge.sh                 # 점수 파싱 + PR 머지 실행 스크립트
-└── linear-status-report.sh       # Linear 상태 업데이트 + 코멘트 생성 스크립트
+├── common/
+│   ├── report-format.md          # 보고 형식 템플릿
+│   ├── linear-status-report.md   # 상태 보고 절차
+│   └── score-based-auto-merge.md # 점수 기반 자동 머지 절차
+└── scripts/
+    ├── linear-status-report.sh   # Linear 상태 업데이트 + 코멘트 생성 스크립트
+    └── auto-merge.sh             # 점수 파싱 + PR 머지 실행 스크립트
 ```
