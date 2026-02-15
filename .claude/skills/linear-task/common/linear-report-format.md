@@ -1,6 +1,6 @@
 # Linear Status Report Format
 
-linear-status-reporter subagent에 전달할 입력 형식입니다.
+`scripts/linear-status-report.sh` 스크립트에 stdin으로 전달할 입력 형식입니다.
 
 ## Input JSON Structure
 
