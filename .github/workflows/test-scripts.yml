@@ -1,0 +1,30 @@
+name: Test Scripts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.claude/skills/linear-task/scripts/**'
+      - '.claude/skills/linear-task/tests/**'
+      - '.github/workflows/test-scripts.yml'
+  pull_request:
+    paths:
+      - '.claude/skills/linear-task/scripts/**'
+      - '.claude/skills/linear-task/tests/**'
+      - '.github/workflows/test-scripts.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify dependencies
+        run: |
+          jq --version
+          bash --version | head -1
+
+      - name: Run linear-status-report tests
+        run: bash .claude/skills/linear-task/tests/test-linear-status-report.sh

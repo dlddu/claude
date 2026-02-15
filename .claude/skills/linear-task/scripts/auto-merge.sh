@@ -5,7 +5,7 @@ set -euo pipefail
 # pr-reviewer JSON을 stdin으로 받아 점수를 파싱하고, 임계값 이상이면 PR을 머지합니다.
 #
 # 사용법:
-#   printf '%s\n' '<pr-reviewer JSON>' | {skill_directory}/scripts/auto-merge.sh --repo /tmp/repo --pr 123 --threshold 90
+#   echo '<pr-reviewer JSON>' | {skill_directory}/scripts/auto-merge.sh --repo /tmp/repo --pr 123 --threshold 90
 #
 # 종료 코드:
 #   0: 정상 완료 (머지 성공 또는 블로킹 판정)
@@ -38,13 +38,13 @@ parse_score() {
     local score
 
     # jq로 파싱 시도
-    if score=$(printf '%s\n' "$INPUT" | jq -r '.review_result.total_score // empty' 2>/dev/null) && [[ -n "$score" ]]; then
+    if score=$(echo "$INPUT" | jq -r '.review_result.total_score // empty' 2>/dev/null) && [[ -n "$score" ]]; then
         echo "$score"
         return 0
     fi
 
     # fallback: grep으로 total_score 추출
-    if score=$(printf '%s\n' "$INPUT" | grep -oP '"total_score"\s*:\s*\K[0-9]+' | head -1) && [[ -n "$score" ]]; then
+    if score=$(echo "$INPUT" | grep -oP '"total_score"\s*:\s*\K[0-9]+' | head -1) && [[ -n "$score" ]]; then
         echo "$score"
         return 0
     fi
@@ -53,9 +53,9 @@ parse_score() {
 }
 
 # success 필드 확인
-check_success=$(printf '%s\n' "$INPUT" | jq -r '.success // empty' 2>/dev/null || true)
+check_success=$(echo "$INPUT" | jq -r '.success // empty' 2>/dev/null || true)
 if [[ "$check_success" == "false" ]]; then
-    error_msg=$(printf '%s\n' "$INPUT" | jq -r '.error // "unknown error"' 2>/dev/null || echo "unknown error")
+    error_msg=$(echo "$INPUT" | jq -r '.error // "unknown error"' 2>/dev/null || echo "unknown error")
     cat <<EOF
 {"status":"blocked","total_score":null,"merged":false,"blocking_stage":"pr_review","blocking_reason":"리뷰 실패: $error_msg"}
 EOF

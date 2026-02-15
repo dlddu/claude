@@ -230,7 +230,7 @@ Linear GraphQL API를 호출하여 상태 변경과 코멘트 생성을 처리�
 
 **스크립트 실행**:
 ```bash
-printf '%s\n' '{script_input}' | {skill_directory}/scripts/linear-status-report.sh
+echo '{script_input}' | {skill_directory}/scripts/linear-status-report.sh
 ```
 
 > `{skill_directory}`는 이 스킬의 디렉토리 경로입니다.
