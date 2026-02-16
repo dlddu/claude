@@ -258,6 +258,12 @@ echo '{script_input}' | {skill_directory}/scripts/linear-status-report.sh
 - blocking_info 구성 후 linear-status-report.sh 스크립트로 보고
 
 ### linear-status-report.sh (Step 5) 실패 시
+- 첫 실행에서 실패한 경우(`success`가 `false`이거나 종료 코드가 0이 아닌 경우), `DEBUG=1` 환경변수를 설정하여 동일한 입력으로 재실행합니다:
+  ```bash
+  echo '{script_input}' | DEBUG=1 {skill_directory}/scripts/linear-status-report.sh
+  ```
+  디버그 모드에서는 각 단계별 상세 로그가 stderr로 출력되므로, 실패 원인을 파악하는 데 활용합니다.
+- 디버그 재실행도 실패하면 해당 stderr 로그를 참고하여 문제를 진단합니다.
 - 워크플로우 결과는 유지
 - Linear 보고 실패를 에러로 기록
 - 부분 성공 결과 반환
