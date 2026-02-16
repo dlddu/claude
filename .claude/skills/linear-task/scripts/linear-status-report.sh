@@ -91,7 +91,7 @@ linear_api() {
 # --- Step 1: 팀 워크플로우 상태 조회 ---
 debug_log "--- Step 1: 팀 워크플로우 상태 조회 시작 (TEAM_ID=$TEAM_ID) ---"
 STATES_QUERY=$(jq -n --arg tid "$TEAM_ID" '{
-    query: "query($teamId: String!) { workflowStates(filter: { team: { id: { eq: $teamId } } }) { nodes { id name type } } }",
+    query: "query($teamId: ID!) { workflowStates(filter: { team: { id: { eq: $teamId } } }) { nodes { id name type } } }",
     variables: { teamId: $tid }
 }')
 
