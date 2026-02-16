@@ -13,9 +13,9 @@ debug_log() {
 # comment-composer subagent가 생성한 코멘트 본문으로 코멘트를 생성합니다.
 #
 # 사용법:
-#   echo '<script_input_json>' | {skill_directory}/scripts/linear-status-report.sh
+#   {skill_directory}/scripts/linear-status-report.sh <input_file>
 #
-# 입력 JSON (stdin):
+# 입력 JSON (파일):
 #   {
 #     "issue_id": "이슈 ID",
 #     "team_id": "팀 ID",
@@ -46,9 +46,26 @@ EOF
 fi
 debug_log "LINEAR_API_KEY 확인 완료 (길이: ${#LINEAR_API_KEY})"
 
-# stdin에서 JSON 읽기
-debug_log "stdin에서 입력 JSON 읽기 시작..."
-INPUT=$(cat)
+# 입력 파일에서 JSON 읽기
+INPUT_FILE="${1:-}"
+debug_log "입력 파일 경로: $INPUT_FILE"
+
+if [[ -z "$INPUT_FILE" ]]; then
+    debug_log "ERROR: 입력 파일 경로가 지정되지 않음"
+    cat <<'EOF'
+{"success":false,"issue_id":null,"status_updated":false,"comment_created":false,"error":"입력 파일 경로가 지정되지 않았습니다. 사용법: linear-status-report.sh <input_file>","error_stage":"init","summary":"입력 파일 경로 미지정"}
+EOF
+    exit 1
+fi
+
+if [[ ! -f "$INPUT_FILE" ]]; then
+    debug_log "ERROR: 입력 파일을 찾을 수 없음: $INPUT_FILE"
+    jq -nc --arg f "$INPUT_FILE" '{"success":false,"issue_id":null,"status_updated":false,"comment_created":false,"error":("입력 파일을 찾을 수 없습니다: "+$f),"error_stage":"init","summary":"입력 파일 없음"}'
+    exit 1
+fi
+
+debug_log "입력 파일에서 JSON 읽기 시작..."
+INPUT=$(cat "$INPUT_FILE")
 debug_log "입력 JSON 수신 완료 (길이: ${#INPUT})"
 
 # 필수 필드 파싱

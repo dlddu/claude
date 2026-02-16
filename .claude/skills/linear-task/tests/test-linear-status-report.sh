@@ -10,7 +10,7 @@ set -euo pipefail
 #   3. status → Linear 상태 매핑
 #   4. API 호출 (curl mock)
 #   5. 특수 문자 / 긴 입력 처리
-#   6. 실패 시나리오 재현 (transcript에서 발견된 버그)
+#   6. 파일 기반 입력 엣지 케이스
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_SCRIPT="$SCRIPT_DIR/../scripts/linear-status-report.sh"
@@ -26,6 +26,7 @@ FAILED_TESTS=()
 setup() {
     # curl mock 디렉토리 설정
     MOCK_DIR=$(mktemp -d)
+    INPUT_TMPFILE=$(mktemp)
     MOCK_CURL="$MOCK_DIR/curl"
 
     # 기본 curl mock: 성공 응답
@@ -40,6 +41,7 @@ setup() {
 teardown() {
     export PATH="$ORIGINAL_PATH"
     rm -rf "$MOCK_DIR"
+    rm -f "$INPUT_TMPFILE"
     unset LINEAR_API_KEY 2>/dev/null || true
 }
 
@@ -131,17 +133,18 @@ MOCK_END
 # $1: 테스트 이름
 # $2: 예상 exit code
 # $3: 예상 출력 패턴 (grep 패턴)
-# stdin: 테스트 입력
+# $4: 입력 파일 경로
 run_test() {
     local test_name="$1"
     local expected_exit="$2"
     local expected_pattern="$3"
+    local input_file="$4"
 
     TOTAL=$((TOTAL + 1))
 
     local output
     local actual_exit=0
-    output=$(bash "$TARGET_SCRIPT" 2>&1) || actual_exit=$?
+    output=$(bash "$TARGET_SCRIPT" "$input_file" 2>&1) || actual_exit=$?
 
     local passed=true
     local fail_reasons=""
@@ -212,7 +215,10 @@ echo "--- 그룹 1: LINEAR_API_KEY 검증 ---"
 
 # Test 1.1: LINEAR_API_KEY 미설정
 TOTAL=$((TOTAL + 1))
-output=$(unset LINEAR_API_KEY; echo '{"issue_id":"id","team_id":"tid","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+_tmpfile=$(mktemp)
+echo '{"issue_id":"id","team_id":"tid","status":"success","comment_body":"body"}' > "$_tmpfile"
+output=$(unset LINEAR_API_KEY; bash "$TARGET_SCRIPT" "$_tmpfile" 2>&1) && exit_code=0 || exit_code=$?
+rm -f "$_tmpfile"
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "LINEAR_API_KEY"; then
     PASS=$((PASS + 1))
     printf "  ✓ LINEAR_API_KEY 미설정 시 에러 반환\n"
@@ -225,7 +231,10 @@ fi
 
 # Test 1.2: LINEAR_API_KEY 빈 문자열
 TOTAL=$((TOTAL + 1))
-output=$(LINEAR_API_KEY="" bash "$TARGET_SCRIPT" <<< '{"issue_id":"id","team_id":"tid","status":"success","comment_body":"body"}' 2>&1) && exit_code=0 || exit_code=$?
+_tmpfile=$(mktemp)
+echo '{"issue_id":"id","team_id":"tid","status":"success","comment_body":"body"}' > "$_tmpfile"
+output=$(LINEAR_API_KEY="" bash "$TARGET_SCRIPT" "$_tmpfile" 2>&1) && exit_code=0 || exit_code=$?
+rm -f "$_tmpfile"
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "LINEAR_API_KEY"; then
     PASS=$((PASS + 1))
     printf "  ✓ LINEAR_API_KEY 빈 문자열 시 에러 반환\n"
@@ -247,7 +256,8 @@ setup
 
 # Test 2.1: 모든 필수 필드 존재 → 파싱 성공 (curl mock으로 전체 플로우)
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"test body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"test body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]]; then
     PASS=$((PASS + 1))
     printf "  ✓ 모든 필수 필드 존재 → 성공\n"
@@ -260,7 +270,8 @@ fi
 
 # Test 2.2: issue_id 누락
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"team_id":"team-1","status":"success","comment_body":"body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ issue_id 누락 시 에러\n"
@@ -273,7 +284,8 @@ fi
 
 # Test 2.3: team_id 누락
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"iss-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","status":"success","comment_body":"body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ team_id 누락 시 에러\n"
@@ -286,7 +298,8 @@ fi
 
 # Test 2.4: status 누락
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"iss-1","team_id":"team-1","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","team_id":"team-1","comment_body":"body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ status 누락 시 에러\n"
@@ -299,7 +312,8 @@ fi
 
 # Test 2.5: comment_body 누락
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","team_id":"team-1","status":"success"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ comment_body 누락 시 에러\n"
@@ -310,22 +324,23 @@ else
     printf "    exit=%s output=%s\n" "$exit_code" "$(printf '%s' "$output" | head -c 200)"
 fi
 
-# Test 2.6: 빈 stdin
+# Test 2.6: 입력 파일 인수 없음
 TOTAL=$((TOTAL + 1))
-output=$(printf '' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+output=$(bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -ne 0 ]]; then
     PASS=$((PASS + 1))
-    printf "  ✓ 빈 stdin 시 에러\n"
+    printf "  ✓ 입력 파일 인수 없음 시 에러\n"
 else
     FAIL=$((FAIL + 1))
-    FAILED_TESTS+=("빈 stdin")
-    printf "  ✗ 빈 stdin 시 에러 (성공하면 안 됨)\n"
+    FAILED_TESTS+=("입력 파일 인수 없음")
+    printf "  ✗ 입력 파일 인수 없음 시 에러 (성공하면 안 됨)\n"
     printf "    exit=%s output=%s\n" "$exit_code" "$(printf '%s' "$output" | head -c 200)"
 fi
 
 # Test 2.7: 잘못된 JSON
 TOTAL=$((TOTAL + 1))
-output=$(echo 'not-a-json' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo 'not-a-json' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -ne 0 ]]; then
     PASS=$((PASS + 1))
     printf "  ✓ 잘못된 JSON 시 에러\n"
@@ -338,7 +353,8 @@ fi
 
 # Test 2.8: 빈 JSON 객체
 TOTAL=$((TOTAL + 1))
-output=$(echo '{}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ 빈 JSON 객체 {} 시 필수 필드 누락 에러\n"
@@ -346,6 +362,33 @@ else
     FAIL=$((FAIL + 1))
     FAILED_TESTS+=("빈 JSON 객체")
     printf "  ✗ 빈 JSON 객체 {} 시 필수 필드 누락 에러\n"
+    printf "    exit=%s output=%s\n" "$exit_code" "$(printf '%s' "$output" | head -c 200)"
+fi
+
+# Test 2.9: 존재하지 않는 파일 경로
+TOTAL=$((TOTAL + 1))
+output=$(bash "$TARGET_SCRIPT" "/nonexistent/path/to/file.json" 2>&1) && exit_code=0 || exit_code=$?
+if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "입력 파일을 찾을 수 없습니다"; then
+    PASS=$((PASS + 1))
+    printf "  ✓ 존재하지 않는 파일 경로 시 에러\n"
+else
+    FAIL=$((FAIL + 1))
+    FAILED_TESTS+=("존재하지 않는 파일 경로")
+    printf "  ✗ 존재하지 않는 파일 경로 시 에러\n"
+    printf "    exit=%s output=%s\n" "$exit_code" "$(printf '%s' "$output" | head -c 200)"
+fi
+
+# Test 2.10: 빈 파일
+TOTAL=$((TOTAL + 1))
+> "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
+if [[ "$exit_code" -ne 0 ]]; then
+    PASS=$((PASS + 1))
+    printf "  ✓ 빈 파일 시 에러\n"
+else
+    FAIL=$((FAIL + 1))
+    FAILED_TESTS+=("빈 파일")
+    printf "  ✗ 빈 파일 시 에러 (성공하면 안 됨)\n"
     printf "    exit=%s output=%s\n" "$exit_code" "$(printf '%s' "$output" | head -c 200)"
 fi
 
@@ -362,7 +405,8 @@ setup
 
 # Test 3.1: status=success → Done
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 actual_status=$(printf '%s' "$output" | jq -r '.new_status // empty' 2>/dev/null)
 if [[ "$actual_status" == "Done" ]]; then
     PASS=$((PASS + 1))
@@ -376,7 +420,8 @@ fi
 
 # Test 3.2: status=blocked → In Review
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"blocked","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","team_id":"team-1","status":"blocked","comment_body":"body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 actual_status=$(printf '%s' "$output" | jq -r '.new_status // empty' 2>/dev/null)
 if [[ "$actual_status" == "In Review" ]]; then
     PASS=$((PASS + 1))
@@ -390,7 +435,8 @@ fi
 
 # Test 3.3: 알 수 없는 status 값 → In Review (기본값)
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"unknown","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","team_id":"team-1","status":"unknown","comment_body":"body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 actual_status=$(printf '%s' "$output" | jq -r '.new_status // empty' 2>/dev/null)
 if [[ "$actual_status" == "In Review" ]]; then
     PASS=$((PASS + 1))
@@ -412,7 +458,8 @@ echo "--- 그룹 4: 성공 플로우 출력 검증 ---"
 
 setup
 
-output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"test body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"test body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 
 assert_json_field "success=true" ".success" "true" "$output"
 assert_json_field "issue_id 반환" ".issue_id" "iss-1" "$output"
@@ -435,7 +482,8 @@ setup
 create_curl_mock "states_error"
 
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q '"error_stage":"status_lookup"'; then
     PASS=$((PASS + 1))
     printf "  ✓ 상태 조회 API 에러 → error_stage=status_lookup\n"
@@ -452,7 +500,8 @@ setup
 create_curl_mock "state_not_found"
 
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "찾을 수 없습니다"; then
     PASS=$((PASS + 1))
     printf "  ✓ Done 상태 없음 → 에러\n"
@@ -469,7 +518,8 @@ setup
 create_curl_mock "comment_fail"
 
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 error_stage=$(printf '%s' "$output" | jq -r '.error_stage // empty' 2>/dev/null)
 status_updated=$(printf '%s' "$output" | jq -r '.status_updated // empty' 2>/dev/null)
 if [[ "$error_stage" == "comment_create" ]] && [[ "$status_updated" == "true" ]]; then
@@ -503,7 +553,8 @@ INPUT_JSON=$(jq -n \
     --arg body "$COMPLEX_BODY" \
     '{issue_id: $iid, team_id: $tid, status: $status, comment_body: $body}')
 
-output=$(echo "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo "$INPUT_JSON" > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
     printf "  ✓ 마크다운 + 한국어 + 이모지 comment_body 처리 성공\n"
@@ -524,7 +575,8 @@ INPUT_JSON=$(jq -n \
     --arg body "$TRICKY_BODY" \
     '{issue_id: $iid, team_id: $tid, status: $status, comment_body: $body}')
 
-output=$(echo "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo "$INPUT_JSON" > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
     printf "  ✓ JSON 특수 문자 (따옴표, 백슬래시) 처리 성공\n"
@@ -584,7 +636,8 @@ INPUT_JSON=$(jq -n \
     --arg body "$LONG_BODY" \
     '{issue_id: $iid, team_id: $tid, status: $status, comment_body: $body}')
 
-output=$(echo "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo "$INPUT_JSON" > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
     printf "  ✓ 긴 comment_body (실제 실패 사례 재현) 처리 성공\n"
@@ -600,33 +653,37 @@ teardown
 echo ""
 
 # ─────────────────────────────────────────────
-# 그룹 7: [버그 재현] echo로 직접 JSON 전달
+# 그룹 7: 다양한 JSON 입력 형식
 # ─────────────────────────────────────────────
-echo "--- 그룹 7: 버그 재현 - echo로 직접 JSON 전달 ---"
+echo "--- 그룹 7: 다양한 JSON 입력 형식 ---"
 
 setup
 
-# Test 7.1: echo로 멀티라인 JSON 전달 (실제 호출 방식)
+# Test 7.1: 멀티라인 JSON 파일
 TOTAL=$((TOTAL + 1))
-output=$(echo '{
+cat > "$INPUT_TMPFILE" << 'TESTJSON'
+{
   "issue_id": "eb074673-17d9-4da2-88fc-853d3dbc3265",
   "team_id": "59d63b86-2d3d-4e18-a017-820d1c2d7e88",
   "status": "success",
   "comment_body": "## 작업 완료 보고\n\n**Claude Session ID**: `test`"
-}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+}
+TESTJSON
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
-    printf "  ✓ echo로 멀티라인 JSON 전달 성공\n"
+    printf "  ✓ 멀티라인 JSON 파일 처리 성공\n"
 else
     FAIL=$((FAIL + 1))
-    FAILED_TESTS+=("echo 멀티라인 JSON")
-    printf "  ✗ echo로 멀티라인 JSON 전달\n"
+    FAILED_TESTS+=("멀티라인 JSON 파일")
+    printf "  ✗ 멀티라인 JSON 파일 처리\n"
     printf "    exit=%s output=%s\n" "$exit_code" "$(printf '%s' "$output" | head -c 300)"
 fi
 
 # Test 7.2: comment_body에 literal \n (JSON escape) 포함
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"line1\\nline2\\nline3"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"line1\\nline2\\nline3"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
     printf "  ✓ JSON escape \\\\n 포함 comment_body 처리 성공\n"
@@ -637,9 +694,9 @@ else
     printf "    exit=%s output=%s\n" "$exit_code" "$(printf '%s' "$output" | head -c 300)"
 fi
 
-# Test 7.3: heredoc으로 JSON 전달
+# Test 7.3: heredoc으로 파일에 JSON 저장
 TOTAL=$((TOTAL + 1))
-output=$(bash "$TARGET_SCRIPT" <<'HEREDOC_INPUT'
+cat > "$INPUT_TMPFILE" <<'HEREDOC_INPUT'
 {
   "issue_id": "iss-heredoc",
   "team_id": "team-1",
@@ -647,15 +704,14 @@ output=$(bash "$TARGET_SCRIPT" <<'HEREDOC_INPUT'
   "comment_body": "heredoc test body"
 }
 HEREDOC_INPUT
-) && exit_code=0 || exit_code=$?
-# Note: heredoc adds trailing newline, should still work
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
-    printf "  ✓ heredoc으로 JSON 전달 성공\n"
+    printf "  ✓ heredoc으로 파일에 JSON 저장 후 처리 성공\n"
 else
     FAIL=$((FAIL + 1))
-    FAILED_TESTS+=("heredoc JSON")
-    printf "  ✗ heredoc으로 JSON 전달\n"
+    FAILED_TESTS+=("heredoc JSON 파일")
+    printf "  ✗ heredoc으로 파일에 JSON 저장 후 처리\n"
     printf "    exit=%s output=%s\n" "$exit_code" "$(printf '%s' "$output" | head -c 300)"
 fi
 
@@ -664,7 +720,8 @@ fi
 TOTAL=$((TOTAL + 1))
 # 이 테스트는 원본 커맨드의 single-quoted string에서 \n이 literal인 경우를 재현
 EXACT_CMD='{"issue_id":"eb074673","team_id":"59d63b86","status":"success","comment_body":"## 보고\\n\\n**Session**: test\\n### 결과\\n- 항목1\\n- 항목2"}'
-output=$(echo "$EXACT_CMD" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo "$EXACT_CMD" > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]]; then
     PASS=$((PASS + 1))
     printf "  ✓ 원본 실패 사례 재현 → 성공 (jq가 \\\\n을 파싱)\n"
@@ -688,7 +745,8 @@ setup
 
 # Test 8.1: 성공 시 출력이 유효한 JSON
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if printf '%s' "$output" | jq empty 2>/dev/null; then
     PASS=$((PASS + 1))
     printf "  ✓ 성공 시 유효한 JSON 출력\n"
@@ -703,7 +761,10 @@ teardown
 
 # Test 8.2: 실패 시 출력이 유효한 JSON
 TOTAL=$((TOTAL + 1))
-output=$(LINEAR_API_KEY="test" bash "$TARGET_SCRIPT" <<< '{"issue_id":"iss-1","team_id":"team-1","status":"success"}' 2>&1) && exit_code=0 || exit_code=$?
+_tmpfile=$(mktemp)
+echo '{"issue_id":"iss-1","team_id":"team-1","status":"success"}' > "$_tmpfile"
+output=$(LINEAR_API_KEY="test" bash "$TARGET_SCRIPT" "$_tmpfile" 2>&1) && exit_code=0 || exit_code=$?
+rm -f "$_tmpfile"
 if printf '%s' "$output" | jq empty 2>/dev/null; then
     PASS=$((PASS + 1))
     printf "  ✓ 실패 시 유효한 JSON 출력\n"
@@ -716,7 +777,10 @@ fi
 
 # Test 8.3: LINEAR_API_KEY 에러 시 유효한 JSON
 TOTAL=$((TOTAL + 1))
-output=$(unset LINEAR_API_KEY; echo '{}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+_tmpfile=$(mktemp)
+echo '{}' > "$_tmpfile"
+output=$(unset LINEAR_API_KEY; bash "$TARGET_SCRIPT" "$_tmpfile" 2>&1) && exit_code=0 || exit_code=$?
+rm -f "$_tmpfile"
 if printf '%s' "$output" | jq empty 2>/dev/null; then
     PASS=$((PASS + 1))
     printf "  ✓ API KEY 에러 시 유효한 JSON 출력\n"
@@ -724,6 +788,35 @@ else
     FAIL=$((FAIL + 1))
     FAILED_TESTS+=("API KEY 에러 시 JSON 유효성")
     printf "  ✗ API KEY 에러 시 유효한 JSON 출력\n"
+    printf "    output=%s\n" "$(printf '%s' "$output" | head -c 200)"
+fi
+
+# Test 8.4: 존재하지 않는 파일 에러 시 유효한 JSON
+TOTAL=$((TOTAL + 1))
+_tmpfile=$(mktemp)
+echo '{}' > "$_tmpfile"
+output=$(LINEAR_API_KEY="test" bash "$TARGET_SCRIPT" "/nonexistent/file" 2>&1) && exit_code=0 || exit_code=$?
+rm -f "$_tmpfile"
+if printf '%s' "$output" | jq empty 2>/dev/null; then
+    PASS=$((PASS + 1))
+    printf "  ✓ 존재하지 않는 파일 에러 시 유효한 JSON 출력\n"
+else
+    FAIL=$((FAIL + 1))
+    FAILED_TESTS+=("파일 없음 에러 시 JSON 유효성")
+    printf "  ✗ 존재하지 않는 파일 에러 시 유효한 JSON 출력\n"
+    printf "    output=%s\n" "$(printf '%s' "$output" | head -c 200)"
+fi
+
+# Test 8.5: 파일 인수 없음 에러 시 유효한 JSON
+TOTAL=$((TOTAL + 1))
+output=$(LINEAR_API_KEY="test" bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+if printf '%s' "$output" | jq empty 2>/dev/null; then
+    PASS=$((PASS + 1))
+    printf "  ✓ 파일 인수 없음 에러 시 유효한 JSON 출력\n"
+else
+    FAIL=$((FAIL + 1))
+    FAILED_TESTS+=("파일 인수 없음 에러 시 JSON 유효성")
+    printf "  ✗ 파일 인수 없음 에러 시 유효한 JSON 출력\n"
     printf "    output=%s\n" "$(printf '%s' "$output" | head -c 200)"
 fi
 
@@ -738,7 +831,8 @@ setup
 
 # Test 9.1: null 값이 포함된 필드
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":null,"team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":null,"team_id":"team-1","status":"success","comment_body":"body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ null 값 필드 → 필수 필드 누락\n"
@@ -751,7 +845,8 @@ fi
 
 # Test 9.2: 빈 문자열 값
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"","team_id":"team-1","status":"success","comment_body":"body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ 빈 문자열 필드 → 필수 필드 누락\n"
@@ -764,7 +859,8 @@ fi
 
 # Test 9.3: 추가 필드가 있어도 정상 동작
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body","extra_field":"extra"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body","extra_field":"extra"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
     printf "  ✓ 추가 필드 있어도 정상 동작\n"
@@ -783,7 +879,8 @@ INPUT_JSON=$(jq -n \
     --arg status "success" \
     --arg body "It's a test with 'single quotes'" \
     '{issue_id: $iid, team_id: $tid, status: $status, comment_body: $body}')
-output=$(echo "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo "$INPUT_JSON" > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 0 ]] && printf '%s' "$output" | jq -e '.success == true' > /dev/null 2>&1; then
     PASS=$((PASS + 1))
     printf "  ✓ single quote 포함 comment_body 처리 성공\n"
@@ -805,7 +902,6 @@ echo "--- 그룹 10: 출력 JSON injection 검증 ---"
 
 # 스크립트의 에러 경로에서 heredoc + 변수 보간을 사용하므로,
 # API 에러 메시지에 큰따옴표가 포함되면 출력 JSON이 깨질 수 있음
-# (line 80, 90, 134 등의 cat <<EOF 패턴)
 
 setup
 
@@ -829,7 +925,8 @@ EOF
 chmod +x "$MOCK_CURL"
 
 TOTAL=$((TOTAL + 1))
-output=$(echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '{"issue_id":"iss-1","team_id":"team-1","status":"success","comment_body":"body"}' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if printf '%s' "$output" | jq empty 2>/dev/null; then
     PASS=$((PASS + 1))
     printf "  ✓ API 에러 메시지에 큰따옴표 포함 → 출력 JSON 유효\n"
@@ -854,7 +951,8 @@ INPUT_JSON=$(jq -n \
     --arg status "success" \
     --arg body "body" \
     '{issue_id: $iid, team_id: $tid, status: $status, comment_body: $body}')
-output=$(echo "$INPUT_JSON" | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo "$INPUT_JSON" > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if printf '%s' "$output" | jq empty 2>/dev/null; then
     PASS=$((PASS + 1))
     printf "  ✓ issue_id에 큰따옴표 포함 → 출력 JSON 유효 (injection 방지됨)\n"
@@ -870,27 +968,28 @@ teardown
 echo ""
 
 # ─────────────────────────────────────────────
-# 그룹 11: stdin 소비 문제 (원본 버그 근본 원인 추정)
+# 그룹 11: 입력 엣지 케이스 (파일 기반)
 # ─────────────────────────────────────────────
-echo "--- 그룹 11: stdin 소비 문제 (근본 원인 분석) ---"
+echo "--- 그룹 11: 입력 엣지 케이스 (파일 기반) ---"
 
 setup
 
-# Test 11.1: stdin이 /dev/null인 경우 → 빈 입력으로 에러
+# Test 11.1: 파일 인수 없음 → 에러
 TOTAL=$((TOTAL + 1))
-output=$(bash "$TARGET_SCRIPT" < /dev/null 2>&1) && exit_code=0 || exit_code=$?
+output=$(bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -ne 0 ]]; then
     PASS=$((PASS + 1))
-    printf "  ✓ stdin=/dev/null → 에러 (exit=%s)\n" "$exit_code"
+    printf "  ✓ 파일 인수 없음 → 에러 (exit=%s)\n" "$exit_code"
 else
     FAIL=$((FAIL + 1))
-    FAILED_TESTS+=("stdin=/dev/null")
-    printf "  ✗ stdin=/dev/null → 성공하면 안 됨\n"
+    FAILED_TESTS+=("파일 인수 없음")
+    printf "  ✗ 파일 인수 없음 → 성공하면 안 됨\n"
 fi
 
 # Test 11.2: null JSON ("null" 문자열)
 TOTAL=$((TOTAL + 1))
-output=$(echo 'null' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo 'null' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -eq 1 ]] && printf '%s' "$output" | grep -q "필수 필드 누락"; then
     PASS=$((PASS + 1))
     printf "  ✓ JSON null 입력 → 필수 필드 누락\n"
@@ -901,21 +1000,23 @@ else
     printf "    exit=%s output=%s\n" "$exit_code" "$(printf '%s' "$output" | head -c 200)"
 fi
 
-# Test 11.3: 뉴라인만 있는 입력
+# Test 11.3: 뉴라인만 있는 파일
 TOTAL=$((TOTAL + 1))
-output=$(printf '\n\n\n' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+printf '\n\n\n' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -ne 0 ]]; then
     PASS=$((PASS + 1))
-    printf "  ✓ 뉴라인만 있는 입력 → 에러\n"
+    printf "  ✓ 뉴라인만 있는 파일 → 에러\n"
 else
     FAIL=$((FAIL + 1))
-    FAILED_TESTS+=("뉴라인만 입력")
-    printf "  ✗ 뉴라인만 있는 입력 → 성공하면 안 됨\n"
+    FAILED_TESTS+=("뉴라인만 파일")
+    printf "  ✗ 뉴라인만 있는 파일 → 성공하면 안 됨\n"
 fi
 
 # Test 11.4: JSON 배열 입력 (객체가 아닌)
 TOTAL=$((TOTAL + 1))
-output=$(echo '[{"issue_id":"iss-1"}]' | bash "$TARGET_SCRIPT" 2>&1) && exit_code=0 || exit_code=$?
+echo '[{"issue_id":"iss-1"}]' > "$INPUT_TMPFILE"
+output=$(bash "$TARGET_SCRIPT" "$INPUT_TMPFILE" 2>&1) && exit_code=0 || exit_code=$?
 if [[ "$exit_code" -ne 0 ]]; then
     PASS=$((PASS + 1))
     printf "  ✓ JSON 배열 입력 → 에러\n"
@@ -925,23 +1026,25 @@ else
     printf "  ✗ JSON 배열 입력 → 성공하면 안 됨\n"
 fi
 
-# Test 11.5: 근본 원인 진단 - set -euo pipefail 하에서 빈 stdin + jq 동작
-# 이 테스트는 실제 스크립트의 line 37-43 동작을 격리하여 검증
+# Test 11.5: [진단] 빈 파일 → cat → jq → 빈 ISSUE_ID
 TOTAL=$((TOTAL + 1))
-diag_output=$(bash -c '
+_empty_file=$(mktemp)
+> "$_empty_file"
+diag_output=$(bash -c "
 set -euo pipefail
-INPUT=$(cat < /dev/null)
-ISSUE_ID=$(echo "$INPUT" | jq -r ".issue_id // empty")
-echo "ISSUE_ID_EMPTY=$([[ -z "$ISSUE_ID" ]] && echo "yes" || echo "no")"
-' 2>&1) && diag_exit=0 || diag_exit=$?
+INPUT=\$(cat \"$_empty_file\")
+ISSUE_ID=\$(echo \"\$INPUT\" | jq -r '.issue_id // empty')
+echo \"ISSUE_ID_EMPTY=\$([[ -z \"\$ISSUE_ID\" ]] && echo yes || echo no)\"
+" 2>&1) && diag_exit=0 || diag_exit=$?
+rm -f "$_empty_file"
 if printf '%s' "$diag_output" | grep -q "ISSUE_ID_EMPTY=yes"; then
     PASS=$((PASS + 1))
-    printf "  ✓ [진단] 빈 stdin → cat → jq → 빈 ISSUE_ID (set -e 통과, exit=0)\n"
-    printf "    → 이것이 원본 버그의 근본 원인: stdin이 비어있으면 jq가 에러 없이 빈 값 반환\n"
+    printf "  ✓ [진단] 빈 파일 → cat → jq → 빈 ISSUE_ID (set -e 통과, exit=0)\n"
+    printf "    → 빈 파일 입력 시 jq가 에러 없이 빈 값 반환하므로 필수 필드 검증으로 처리됨\n"
 else
     FAIL=$((FAIL + 1))
-    FAILED_TESTS+=("[진단] 빈 stdin jq 동작")
-    printf "  ✗ [진단] 빈 stdin 동작 확인 실패\n"
+    FAILED_TESTS+=("[진단] 빈 파일 jq 동작")
+    printf "  ✗ [진단] 빈 파일 동작 확인 실패\n"
     printf "    output=%s exit=%s\n" "$diag_output" "$diag_exit"
 fi
 
