@@ -13,9 +13,9 @@ debug_log() {
 # comment-composer subagent가 생성한 코멘트 본문으로 코멘트를 생성합니다.
 #
 # 사용법:
-#   echo '<script_input_json>' | {skill_directory}/scripts/linear-status-report.sh
+#   {skill_directory}/scripts/linear-status-report.sh --input <file>
 #
-# 입력 JSON (stdin):
+# 입력 JSON (파일):
 #   {
 #     "issue_id": "이슈 ID",
 #     "team_id": "팀 ID",
@@ -32,8 +32,21 @@ debug_log() {
 
 LINEAR_API_URL="https://api.linear.app/graphql"
 
+# 인자 파싱
+INPUT_FILE=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --input) INPUT_FILE="$2"; shift 2 ;;
+        *)
+            jq -nc --arg opt "$1" '{success:false,issue_id:null,status_updated:false,comment_created:false,error:("알 수 없는 옵션: "+$opt),error_stage:"init",summary:("알 수 없는 옵션: "+$opt)}'
+            exit 1
+            ;;
+    esac
+done
+
 debug_log "=== linear-status-report.sh 시작 ==="
 debug_log "LINEAR_API_URL: $LINEAR_API_URL"
+debug_log "INPUT_FILE: $INPUT_FILE"
 
 # LINEAR_API_KEY 확인
 debug_log "LINEAR_API_KEY 존재 여부 확인 중..."
@@ -46,10 +59,29 @@ EOF
 fi
 debug_log "LINEAR_API_KEY 확인 완료 (길이: ${#LINEAR_API_KEY})"
 
-# stdin에서 JSON 읽기
-debug_log "stdin에서 입력 JSON 읽기 시작..."
-INPUT=$(cat)
+# 입력 파일 검증
+if [[ -z "$INPUT_FILE" ]]; then
+    debug_log "ERROR: --input 인자가 지정되지 않음"
+    jq -nc '{success:false,issue_id:null,status_updated:false,comment_created:false,error:"--input <file> 인자가 필요합니다",error_stage:"init",summary:"--input 인자 누락"}'
+    exit 1
+fi
+
+if [[ ! -f "$INPUT_FILE" ]]; then
+    debug_log "ERROR: 입력 파일을 찾을 수 없음: $INPUT_FILE"
+    jq -nc --arg f "$INPUT_FILE" '{success:false,issue_id:null,status_updated:false,comment_created:false,error:("입력 파일을 찾을 수 없습니다: "+$f),error_stage:"init",summary:"입력 파일 없음"}'
+    exit 1
+fi
+
+# 입력 파일에서 JSON 읽기
+debug_log "입력 파일에서 JSON 읽기 시작... (파일: $INPUT_FILE)"
+INPUT=$(cat "$INPUT_FILE")
 debug_log "입력 JSON 수신 완료 (길이: ${#INPUT})"
+
+if [[ -z "$INPUT" ]]; then
+    debug_log "ERROR: 입력 파일이 비어 있음: $INPUT_FILE"
+    jq -nc --arg f "$INPUT_FILE" '{success:false,issue_id:null,status_updated:false,comment_created:false,error:("입력 파일이 비어 있습니다: "+$f),error_stage:"init",summary:"입력 파일 비어있음"}'
+    exit 1
+fi
 
 # 필수 필드 파싱
 debug_log "필수 필드 파싱 중..."

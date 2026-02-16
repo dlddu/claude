@@ -6,10 +6,10 @@ Linear API를 호출하여 이슈 상태 업데이트 및 코멘트 생성을 �
 
 ## 스크립트 실행
 
-워크플로우 결과 필드와 subagent 출력을 조합한 JSON을 stdin으로 전달하여 스크립트를 실행합니다:
+워크플로우 결과 필드와 subagent 출력을 조합한 JSON을 파일에 저장한 후 `--input` 인자로 전달하여 스크립트를 실행합니다:
 
 ```bash
-echo '{script_input}' | {skill_directory}/scripts/linear-status-report.sh
+echo '{script_input}' > /tmp/status-report-input.json && DEBUG=1 {skill_directory}/scripts/linear-status-report.sh --input /tmp/status-report-input.json
 ```
 
 > `{skill_directory}`는 이 스킬의 디렉토리 경로입니다.
@@ -70,5 +70,6 @@ echo '{script_input}' | {skill_directory}/scripts/linear-status-report.sh
 ## 에러 처리
 
 - 스크립트 종료 코드가 1인 경우: 초기화 실패 또는 상태 조회 실패. stdout의 JSON에서 `error_stage`와 `error`를 확인합니다.
+- 입력 파일이 없거나 비어있는 경우: `error_stage`가 `init`이고 `error`에 파일 경로가 포함됩니다.
 - 상태 업데이트 실패 시에도 코멘트 생성은 시도합니다.
 - 스크립트 자체가 실행 불가한 경우: status를 `blocked`로, `blocking_info.stage`를 `linear_status_report`로 설정합니다.

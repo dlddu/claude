@@ -229,8 +229,9 @@ Linear GraphQL API를 호출하여 상태 변경과 코멘트 생성을 처리�
 ```
 
 **스크립트 실행**:
+입력 JSON을 파일에 저장한 후 `--input` 인자로 전달합니다:
 ```bash
-echo '{script_input}' | {skill_directory}/scripts/linear-status-report.sh
+echo '{script_input}' > /tmp/status-report-input.json && DEBUG=1 {skill_directory}/scripts/linear-status-report.sh --input /tmp/status-report-input.json
 ```
 
 > `{skill_directory}`는 이 스킬의 디렉토리 경로입니다.
@@ -258,12 +259,7 @@ echo '{script_input}' | {skill_directory}/scripts/linear-status-report.sh
 - blocking_info 구성 후 linear-status-report.sh 스크립트로 보고
 
 ### linear-status-report.sh (Step 5) 실패 시
-- 첫 실행에서 실패한 경우(`success`가 `false`이거나 종료 코드가 0이 아닌 경우), `DEBUG=1` 환경변수를 설정하여 동일한 입력으로 재실행합니다:
-  ```bash
-  echo '{script_input}' | DEBUG=1 {skill_directory}/scripts/linear-status-report.sh
-  ```
-  디버그 모드에서는 각 단계별 상세 로그가 stderr로 출력되므로, 실패 원인을 파악하는 데 활용합니다.
-- 디버그 재실행도 실패하면 해당 stderr 로그를 참고하여 문제를 진단합니다.
+- 스크립트는 `DEBUG=1`로 실행되므로 각 단계별 상세 로그가 stderr로 출력됩니다. 실패 시 해당 stderr 로그를 참고하여 문제를 진단합니다.
 - 워크플로우 결과는 유지
 - Linear 보고 실패를 에러로 기록
 - 부분 성공 결과 반환
@@ -290,7 +286,7 @@ echo '{script_input}' | {skill_directory}/scripts/linear-status-report.sh
 | 2 | task-router | researcher 출력 | JSON (라우팅 결정, 지시사항) |
 | 3 | 워크플로우 분기 | router 지시사항 | 작업 결과 JSON |
 | 4 | comment-composer | 결과 JSON | 코멘트 본문 |
-| 5 | linear-status-report.sh (스크립트) | status + comment_body (stdin) | 상태 결정 + 업데이트 + 코멘트 생성 |
+| 5 | linear-status-report.sh (스크립트) | status + comment_body (--input 파일) | 상태 결정 + 업데이트 + 코멘트 생성 |
 
 ## File Structure
 
