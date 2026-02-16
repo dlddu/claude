@@ -1,7 +1,7 @@
 ---
 name: linear-task
 description: Linear 이슈에 대한 작업을 수행합니다. Subagent들을 orchestration하여 리서치, 라우팅, 실행을 자동화합니다. "태스크 작업", "이슈 처리", "Linear 작업" 요청 시 사용
-allowed-tools: mcp__linear-server__get_issue, mcp__linear-server__update_issue, mcp__linear-server__create_comment, mcp__linear-server__list_issue_statuses, Task, Bash, TodoWrite, WebSearch, Read
+allowed-tools: mcp__linear-server__get_issue, mcp__linear-server__create_comment, Task, Bash, TodoWrite, WebSearch, Read
 ---
 
 # Linear Task Orchestration Skill
@@ -38,9 +38,14 @@ Linear 이슈를 처리하기 위해 여러 subagent를 orchestration하는 skil
 └────────┬─────────────────────────┘
          │
          ▼
-┌─────────────────────────┐
-│ linear-status-reporter  │ Step 4: 결과 보고 (공통)
-└─────────────────────────┘
+┌──────────────────────────────┐
+│ comment-composer      │ Step 4: 코멘트 본문 생성 (subagent)
+└────────┬─────────────────────┘
+         │
+         ▼
+┌──────────────────────────────┐
+│ linear-status-report.sh      │ Step 5: 상태 결정 + API 실행 (스크립트)
+└──────────────────────────────┘
 ```
 
 ## Workflow
@@ -182,22 +187,55 @@ router의 `routing_decision.selected_target`에 따라 해당 워크플로우 �
 
 3. **결과 수집**: 워크플로우 완료 후 결과 JSON 구성
 
-### Step 4: Linear 상태 보고 (공통)
+### Step 4: 코멘트 본문 생성
 
-워크플로우 결과를 바탕으로 `linear-status-reporter`를 호출합니다.
+`comment-composer` subagent를 호출하여 코멘트 본문을 생성합니다.
 
 **보고 형식 참조**:
 ```
 Read tool 사용:
-- file_path: "{skill_directory}/common/linear-report-format.md"
+- file_path: "{skill_directory}/common/report-format.md"
 ```
 
 **호출 방법**:
 ```
 Task tool 사용:
-- subagent_type: "linear-status-reporter"
-- prompt: {JSON 형식의 결과 정보}
+- subagent_type: "comment-composer"
+- prompt: {JSON 형식의 결과 정보} (report-format.md 참조)
 ```
+
+**기대 출력**:
+```json
+{
+  "comment_body": "Markdown 코멘트 본문"
+}
+```
+
+### Step 5: Linear 상태 업데이트 + 코멘트 생성
+
+subagent가 생성한 `comment_body`와 워크플로우 결과의 `issue_id`, `team_id`, `status`를 조합하여
+`{skill_directory}/scripts/linear-status-report.sh` 스크립트에 전달합니다.
+스크립트가 `status` 필드 기반으로 대상 상태를 결정(success→Done, blocked→In Review)하고,
+Linear GraphQL API를 호출하여 상태 변경과 코멘트 생성을 처리합니다.
+
+**스크립트 입력 JSON 구성**:
+```json
+{
+  "issue_id": "{워크플로우 결과의 issue_id}",
+  "team_id": "{워크플로우 결과의 team_id}",
+  "status": "{워크플로우 결과의 status (success | blocked)}",
+  "comment_body": "{Step 4 subagent가 반환한 comment_body}"
+}
+```
+
+**스크립트 실행**:
+```bash
+echo '{script_input}' | {skill_directory}/scripts/linear-status-report.sh
+```
+
+> `{skill_directory}`는 이 스킬의 디렉토리 경로입니다.
+
+상세 출력 형식은 `{skill_directory}/common/linear-status-report.md`를 참조합니다.
 
 성공 시 → 이슈 상태를 "Done"으로, 완료 보고 코멘트 생성
 블로킹 시 → 이슈 상태를 "In Review"로, 블로킹 보고 코멘트 생성
@@ -217,9 +255,15 @@ Task tool 사용:
 ### 워크플로우 실패 시
 - 실패 원인 분석
 - 부분 완료된 작업 정리
-- blocking_info 구성 후 linear-status-reporter로 보고
+- blocking_info 구성 후 linear-status-report.sh 스크립트로 보고
 
-### linear-status-reporter 실패 시
+### linear-status-report.sh (Step 5) 실패 시
+- 첫 실행에서 실패한 경우(`success`가 `false`이거나 종료 코드가 0이 아닌 경우), `DEBUG=1` 환경변수를 설정하여 동일한 입력으로 재실행합니다:
+  ```bash
+  echo '{script_input}' | DEBUG=1 {skill_directory}/scripts/linear-status-report.sh
+  ```
+  디버그 모드에서는 각 단계별 상세 로그가 stderr로 출력되므로, 실패 원인을 파악하는 데 활용합니다.
+- 디버그 재실행도 실패하면 해당 stderr 로그를 참고하여 문제를 진단합니다.
 - 워크플로우 결과는 유지
 - Linear 보고 실패를 에러로 기록
 - 부분 성공 결과 반환
@@ -245,7 +289,8 @@ Task tool 사용:
 | 1 | linear-task-researcher | issue_id | JSON (이슈 정보, 컨텍스트) |
 | 2 | task-router | researcher 출력 | JSON (라우팅 결정, 지시사항) |
 | 3 | 워크플로우 분기 | router 지시사항 | 작업 결과 JSON |
-| 4 | linear-status-reporter | 결과 + Linear Context | 상태 업데이트 확인 |
+| 4 | comment-composer | 결과 JSON | 코멘트 본문 |
+| 5 | linear-status-report.sh (스크립트) | status + comment_body (stdin) | 상태 결정 + 업데이트 + 코멘트 생성 |
 
 ## File Structure
 
@@ -258,11 +303,11 @@ linear-task/
 │   ├── developer-impl.md         # 구현 + E2E 활성화 워크플로우
 │   ├── mac-developer.md          # TDD 개발 워크플로우 (로컬 테스트 제외)
 │   └── general-purpose.md        # 일반 작업 워크플로우
-└── common/
-    ├── linear-report-format.md   # 보고 형식 템플릿
-    └── score-based-auto-merge.md # 점수 기반 자동 머지 절차 (scripts/auto-merge.sh 호출)
-
-# 별도 위치: repository 루트
-scripts/
-└── auto-merge.sh                 # 점수 파싱 + PR 머지 실행 스크립트
+├── common/
+│   ├── report-format.md          # 보고 형식 템플릿
+│   ├── linear-status-report.md   # 상태 보고 절차
+│   └── score-based-auto-merge.md # 점수 기반 자동 머지 절차
+└── scripts/
+    ├── linear-status-report.sh   # Linear 상태 업데이트 + 코멘트 생성 스크립트
+    └── auto-merge.sh             # 점수 파싱 + PR 머지 실행 스크립트
 ```

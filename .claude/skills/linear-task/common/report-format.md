@@ -1,6 +1,6 @@
-# Linear Status Report Format
+# Comment Composer Input Format
 
-linear-status-reporter subagent에 전달할 입력 형식입니다.
+`comment-composer` subagent에 prompt로 전달할 입력 형식입니다.
 
 ## Input JSON Structure
 
@@ -8,8 +8,6 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
 
 ```json
 {
-  "issue_id": "{issue_id}",
-  "team_id": "{team_id}",
   "session_id": "{session_id}",
   "status": "success",
   "routing_decision": {
@@ -46,8 +44,6 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
 
 ```json
 {
-  "issue_id": "{issue_id}",
-  "team_id": "{team_id}",
   "session_id": "{session_id}",
   "status": "success",
   "routing_decision": {
@@ -90,8 +86,6 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
 
 ```json
 {
-  "issue_id": "{issue_id}",
-  "team_id": "{team_id}",
   "session_id": "{session_id}",
   "status": "success",
   "routing_decision": {
@@ -134,8 +128,6 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
 
 ```json
 {
-  "issue_id": "{issue_id}",
-  "team_id": "{team_id}",
   "session_id": "{session_id}",
   "status": "success",
   "routing_decision": {
@@ -162,8 +154,6 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
 
 ```json
 {
-  "issue_id": "{issue_id}",
-  "team_id": "{team_id}",
   "session_id": "{session_id}",
   "status": "blocked",
   "routing_decision": {
@@ -190,8 +180,6 @@ linear-status-reporter subagent에 전달할 입력 형식입니다.
 
 | 필드 | 설명 |
 |------|------|
-| `issue_id` | Linear 이슈 ID |
-| `team_id` | Linear 팀 ID |
 | `session_id` | Claude Session ID (string substitution `${CLAUDE_SESSION_ID}`) |
 | `status` | "success" 또는 "blocked" |
 | `routing_decision.selected_target` | "developer", "mac-developer" 또는 "general-purpose" |

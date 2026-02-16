@@ -1,21 +1,21 @@
 # Score-Based Auto-Merge Procedure
 
 pr-reviewer 결과에서 점수를 파싱하고 자동 머지를 수행하는 절차입니다.
-`scripts/auto-merge.sh` 스크립트를 실행하여 처리합니다.
+`{skill_directory}/scripts/auto-merge.sh` 스크립트를 실행하여 처리합니다.
 
 ## 스크립트 실행
 
 pr-reviewer subagent의 출력(JSON 텍스트)을 stdin으로 전달하여 스크립트를 실행합니다:
 
 ```bash
-echo '{pr_reviewer_output}' | {repository_root}/scripts/auto-merge.sh \
+echo '{pr_reviewer_output}' | {skill_directory}/scripts/auto-merge.sh \
   --repo /tmp/{repo_name} \
   --pr {pr_number} \
   --threshold {AUTO_MERGE_THRESHOLD}
 ```
 
 > `{pr_reviewer_output}`은 pr-reviewer Task tool이 반환한 전체 JSON 텍스트입니다.
-> `{repository_root}`는 이 repository의 루트 경로입니다 (예: `/home/user/claude`).
+> `{skill_directory}`는 이 스킬의 디렉토리 경로입니다.
 
 ## 스크립트 출력
 
