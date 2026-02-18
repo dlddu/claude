@@ -12,6 +12,12 @@ Linear API를 호출하여 이슈 상태 업데이트 및 코멘트 생성을 �
 echo '{script_input}' > /tmp/status-report-input.json && DEBUG=1 {skill_directory}/scripts/linear-status-report.sh --input /tmp/status-report-input.json
 ```
 
+> **CRITICAL**: 반드시 위의 정확한 명령어 형식을 사용하세요. JSON을 파일로 저장한 뒤 `--input`으로 전달해야 합니다.
+> 아래 패턴은 **절대 사용하지 마세요**:
+> - ❌ `echo '{json}' | ./linear-status-report.sh` (stdin 파이핑 — 스크립트가 stdin을 읽지 않음)
+> - ❌ `./linear-status-report.sh '{json}'` (위치 인자 — 스크립트가 위치 인자를 받지 않음)
+> - ❌ `./linear-status-report.sh --input '{json}'` (인라인 JSON — 반드시 파일 경로를 전달)
+
 > `{skill_directory}`는 이 스킬의 디렉토리 경로입니다.
 
 ## 스크립트 입력
