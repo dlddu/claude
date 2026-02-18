@@ -7,7 +7,7 @@ set -euo pipefail
 LOG_PREFIX="[work-checker]"
 
 # State name configuration (must match agent-supervisor.sh)
-STATE_BACKLOG="Backlog"
+STATE_TODO="Todo"
 STATE_IN_PROGRESS="In Progress"
 STATE_IN_REVIEW="In Review"
 STATE_DONE="Done"
@@ -112,13 +112,13 @@ update_issue_state_by_name() {
 
 # Process Backlog issues (no state changes, only job creation)
 process_backlog_issues() {
-    log "Checking for $STATE_BACKLOG issues..."
+    log "Checking for $STATE_TODO issues..."
 
-    local result=$(get_issues_by_state "$STATE_BACKLOG")
+    local result=$(get_issues_by_state "$STATE_TODO")
     local issue=$(echo "$result" | jq -r '.data.issues.nodes | sort_by(.createdAt)[0] // empty')
 
     if [[ -z "$issue" || "$issue" == "null" ]]; then
-        log "No $STATE_BACKLOG issues found"
+        log "No $STATE_TODO issues found"
         return 0
     fi
 
@@ -127,7 +127,7 @@ process_backlog_issues() {
     local sub_issues=$(echo "$issue" | jq -r '.children.nodes')
     local sub_issue_count=$(echo "$sub_issues" | jq 'length')
 
-    log "Found $STATE_BACKLOG issue: $issue_identifier (ID: $issue_id)"
+    log "Found $STATE_TODO issue: $issue_identifier (ID: $issue_id)"
 
     # Case a: No sub-issues exist
     if [[ "$sub_issue_count" -eq 0 ]]; then
@@ -139,10 +139,10 @@ process_backlog_issues() {
     # Check sub-issue states
     local in_progress_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_PROGRESS" '[.[] | select(.state.name == $state)] | length')
     local in_review_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_REVIEW" '[.[] | select(.state.name == $state)] | length')
-    local backlog_count=$(echo "$sub_issues" | jq --arg state "$STATE_BACKLOG" '[.[] | select(.state.name == $state)] | length')
+    local backlog_count=$(echo "$sub_issues" | jq --arg state "$STATE_TODO" '[.[] | select(.state.name == $state)] | length')
     local done_count=$(echo "$sub_issues" | jq --arg state "$STATE_DONE" '[.[] | select(.state.name == $state)] | length')
 
-    log "Sub-issue stats - $STATE_BACKLOG: $backlog_count, $STATE_IN_PROGRESS: $in_progress_count, $STATE_DONE: $done_count, $STATE_IN_REVIEW: $in_review_count"
+    log "Sub-issue stats - $STATE_TODO: $backlog_count, $STATE_IN_PROGRESS: $in_progress_count, $STATE_DONE: $done_count, $STATE_IN_REVIEW: $in_review_count"
 
     # Case b: All sub-issues are Backlog or Done (no In Progress or In Review)
     if [[ "$in_progress_count" -eq 0 && "$in_review_count" -eq 0 && "$backlog_count" -gt 0 ]]; then
@@ -189,10 +189,10 @@ process_in_progress_issues() {
         local in_progress_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_PROGRESS" '[.[] | select(.state.name == $state)] | length')
         local done_count=$(echo "$sub_issues" | jq --arg state "$STATE_DONE" '[.[] | select(.state.name == $state)] | length')
         local in_review_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_REVIEW" '[.[] | select(.state.name == $state)] | length')
-        local backlog_count=$(echo "$sub_issues" | jq --arg state "$STATE_BACKLOG" '[.[] | select(.state.name == $state)] | length')
+        local backlog_count=$(echo "$sub_issues" | jq --arg state "$STATE_TODO" '[.[] | select(.state.name == $state)] | length')
         local total_count=$sub_issue_count
 
-        log "Sub-issue stats for $issue_identifier - $STATE_BACKLOG: $backlog_count, $STATE_IN_PROGRESS: $in_progress_count, $STATE_DONE: $done_count, $STATE_IN_REVIEW: $in_review_count, Total: $total_count"
+        log "Sub-issue stats for $issue_identifier - $STATE_TODO: $backlog_count, $STATE_IN_PROGRESS: $in_progress_count, $STATE_DONE: $done_count, $STATE_IN_REVIEW: $in_review_count, Total: $total_count"
 
         # Case b: Any sub-issue is in review
         if [[ "$in_review_count" -gt 0 ]]; then
@@ -210,8 +210,8 @@ process_in_progress_issues() {
 
         # Case a: No sub-issues in progress/review but some are still in backlog
         if [[ "$in_progress_count" -eq 0 && "$in_review_count" -eq 0 ]]; then
-            log "Sub-issues still in backlog. Updating issue $issue_identifier to $STATE_BACKLOG..."
-            update_issue_state_by_name "$issue_id" "$STATE_BACKLOG"
+            log "Sub-issues still in backlog. Updating issue $issue_identifier to $STATE_TODO..."
+            update_issue_state_by_name "$issue_id" "$STATE_TODO"
             continue
         fi
 
