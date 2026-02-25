@@ -132,58 +132,66 @@ process_backlog_issues() {
     log "Checking for $STATE_TODO issues..."
 
     local result=$(get_issues_by_state "$STATE_TODO")
-    local issue=$(echo "$result" | jq -r '.data.issues.nodes | sort_by(.createdAt)[0] // empty')
+    local issues=$(echo "$result" | jq -c '.data.issues.nodes | sort_by(.createdAt)')
+    local issue_count=$(echo "$issues" | jq 'length')
 
-    if [[ -z "$issue" || "$issue" == "null" ]]; then
+    if [[ "$issue_count" -eq 0 ]]; then
         log "No $STATE_TODO issues found"
         return 0
     fi
 
-    local issue_id=$(echo "$issue" | jq -r '.id')
-    local issue_identifier=$(echo "$issue" | jq -r '.identifier')
-    local sub_issues=$(echo "$issue" | jq -r '.children.nodes')
-    local sub_issue_count=$(echo "$sub_issues" | jq 'length')
+    log "Found $issue_count $STATE_TODO issues"
 
-    log "Found $STATE_TODO issue: $issue_identifier (ID: $issue_id)"
+    for i in $(seq 0 $((issue_count - 1))); do
+        local issue=$(echo "$issues" | jq ".[$i]")
+        local issue_id=$(echo "$issue" | jq -r '.id')
+        local issue_identifier=$(echo "$issue" | jq -r '.identifier')
+        local sub_issues=$(echo "$issue" | jq -r '.children.nodes')
+        local sub_issue_count=$(echo "$sub_issues" | jq 'length')
 
-    # Case a: No sub-issues exist
-    if [[ "$sub_issue_count" -eq 0 ]]; then
-        log "No sub-issues found. Updating issue to $STATE_IN_PROGRESS and running /linear-plan..."
-        update_issue_state_by_name "$issue_id" "$STATE_IN_PROGRESS"
-        run_claude "/linear-plan" "$issue_identifier"
-        log "linear-plan completed. Updating issue to $STATE_IN_REVIEW for user review..."
-        update_issue_state_by_name "$issue_id" "$STATE_IN_REVIEW"
-        return 0
-    fi
+        log "Evaluating $STATE_TODO issue: $issue_identifier (ID: $issue_id)"
 
-    # Check sub-issue states
-    local in_progress_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_PROGRESS" '[.[] | select(.state.name == $state)] | length')
-    local backlog_count=$(echo "$sub_issues" | jq --arg state "$STATE_TODO" '[.[] | select(.state.name == $state)] | length')
-    local done_count=$(echo "$sub_issues" | jq --arg state "$STATE_DONE" '[.[] | select(.state.name == $state)] | length')
-    local in_review_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_REVIEW" '[.[] | select(.state.name == $state)] | length')
+        # Case a: No sub-issues exist
+        if [[ "$sub_issue_count" -eq 0 ]]; then
+            log "No sub-issues found. Updating issue to $STATE_IN_PROGRESS and running /linear-plan..."
+            update_issue_state_by_name "$issue_id" "$STATE_IN_PROGRESS"
+            run_claude "/linear-plan" "$issue_identifier"
+            log "linear-plan completed. Updating issue to $STATE_IN_REVIEW for user review..."
+            update_issue_state_by_name "$issue_id" "$STATE_IN_REVIEW"
+            return 0
+        fi
 
-    log "Sub-issue stats - $STATE_TODO: $backlog_count, $STATE_IN_PROGRESS: $in_progress_count, $STATE_DONE: $done_count, $STATE_IN_REVIEW: $in_review_count"
-    # Case b: All sub-issues are Backlog or Done
-    if [[ "$in_progress_count" -eq 0 && "$in_review_count" -eq 0 && "$backlog_count" -gt 0 ]]; then
-        # Get first Backlog sub-issue (sorted by createdAt ascending - oldest first)
-        local first_backlog_subissue=$(echo "$sub_issues" | jq -r --arg state "$STATE_TODO" '[.[] | select(.state.name == $state)] | sort_by(.createdAt)[0]')
-        local subissue_id=$(echo "$first_backlog_subissue" | jq -r '.id')
-        local subissue_identifier=$(echo "$first_backlog_subissue" | jq -r '.identifier')
+        # Check sub-issue states
+        local in_progress_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_PROGRESS" '[.[] | select(.state.name == $state)] | length')
+        local backlog_count=$(echo "$sub_issues" | jq --arg state "$STATE_TODO" '[.[] | select(.state.name == $state)] | length')
+        local done_count=$(echo "$sub_issues" | jq --arg state "$STATE_DONE" '[.[] | select(.state.name == $state)] | length')
+        local in_review_count=$(echo "$sub_issues" | jq --arg state "$STATE_IN_REVIEW" '[.[] | select(.state.name == $state)] | length')
 
-        log "Updating issue and sub-issue to $STATE_IN_PROGRESS..."
+        log "Sub-issue stats - $STATE_TODO: $backlog_count, $STATE_IN_PROGRESS: $in_progress_count, $STATE_DONE: $done_count, $STATE_IN_REVIEW: $in_review_count"
+        # Case b: All sub-issues are Backlog or Done
+        if [[ "$in_progress_count" -eq 0 && "$in_review_count" -eq 0 && "$backlog_count" -gt 0 ]]; then
+            # Get first Backlog sub-issue (sorted by createdAt ascending - oldest first)
+            local first_backlog_subissue=$(echo "$sub_issues" | jq -r --arg state "$STATE_TODO" '[.[] | select(.state.name == $state)] | sort_by(.createdAt)[0]')
+            local subissue_id=$(echo "$first_backlog_subissue" | jq -r '.id')
+            local subissue_identifier=$(echo "$first_backlog_subissue" | jq -r '.identifier')
 
-        # Update parent issue to In Progress
-        update_issue_state_by_name "$issue_id" "$STATE_IN_PROGRESS"
+            log "Updating issue and sub-issue to $STATE_IN_PROGRESS..."
 
-        # Update sub-issue to In Progress
-        update_issue_state_by_name "$subissue_id" "$STATE_IN_PROGRESS"
+            # Update parent issue to In Progress
+            update_issue_state_by_name "$issue_id" "$STATE_IN_PROGRESS"
 
-        log "Running /linear-task for sub-issue: $subissue_identifier"
-        run_claude "/linear-task" "$subissue_identifier"
-        return 0
-    fi
+            # Update sub-issue to In Progress
+            update_issue_state_by_name "$subissue_id" "$STATE_IN_PROGRESS"
 
-    log "Backlog issue has sub-issues in progress or in review state. Skipping."
+            log "Running /linear-task for sub-issue: $subissue_identifier"
+            run_claude "/linear-task" "$subissue_identifier"
+            return 0
+        fi
+
+        log "$issue_identifier has sub-issues in progress or in review state. Checking next $STATE_TODO issue..."
+    done
+
+    log "No actionable $STATE_TODO issues found after evaluating all candidates"
     return 0
 }
 
