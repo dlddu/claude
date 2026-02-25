@@ -112,7 +112,21 @@ gh pr diff {pr_number}
 - 20점: 심각한 품질 문제
 - 0점: 품질 기준 미달
 
-#### 3.4 바이너리 파일 포함 여부 (Binary File Check) - 감점 항목
+#### 3.4 CI 통과 여부 (CI Status Check) - 자동 블로킹 항목
+
+> **⚠️ CI 미통과 시 -100점 감점. 예외 없음.**
+> CI가 통과하지 않은 PR은 코드 품질, 요구사항 반영도 등 다른 평가 항목의 점수와 관계없이 자동으로 블로킹됩니다.
+> 어떠한 사유(테스트 환경 문제, flaky test, 인프라 장애 등)로도 이 규칙은 면제되지 않습니다.
+
+**확인 방법**:
+- `gh pr checks {pr_number}` 명령으로 CI 상태 확인
+- 모든 required check가 통과해야 함
+
+**감점 기준**:
+- 0점: 모든 CI 통과
+- **-100점: CI 미통과 (예외 없음 → 자동 블로킹)**
+
+#### 3.5 바이너리 파일 포함 여부 (Binary File Check) - 감점 항목
 
 **검사 항목**:
 - 빌드 산출물 (`dist/`, `build/`, `out/` 등)
@@ -142,10 +156,11 @@ gh pr diff {pr_number}
 ### Step 4: 종합 점수 계산
 
 ```
-총점 = (요구사항 반영도 × 0.4) + (하드코딩 여부 × 0.3) + (일반 코드 품질 × 0.3) + 바이너리 감점
+총점 = (요구사항 반영도 × 0.4) + (하드코딩 여부 × 0.3) + (일반 코드 품질 × 0.3) + CI 감점 + 바이너리 감점
 ```
 
 > **참고**: 바이너리 감점은 0 ~ -20점 범위이며, 총점은 최소 0점입니다.
+> **⚠️ 중요**: CI 미통과 시 -100점이 적용되며, 이 규칙에는 예외가 없습니다. CI가 실패한 PR은 어떤 경우에도 머지할 수 없습니다.
 
 ### Step 5: PR 코멘트 작성
 
@@ -164,6 +179,7 @@ gh pr comment {pr_number} --body "$(cat <<'EOF'
 | 요구사항 반영도 | {requirements_score}/100 | 40% | {requirements_contribution} |
 | 하드코딩 여부 | {hardcoding_score}/100 | 30% | {hardcoding_contribution} |
 | 일반 코드 품질 | {quality_score}/100 | 30% | {quality_contribution} |
+| CI 통과 여부 | - | 감점 | {ci_penalty} |
 | 바이너리 파일 포함 | - | 감점 | {binary_penalty} |
 
 ---
@@ -197,7 +213,13 @@ gh pr comment {pr_number} --body "$(cat <<'EOF'
 **개선 제안**:
 {improvement_suggestions}
 
-#### 4. 바이너리 파일 포함 여부 ({binary_penalty}점)
+#### 4. CI 통과 여부 ({ci_penalty}점)
+
+{ci_feedback}
+
+> ⚠️ CI 미통과 시 -100점 감점, 예외 없음
+
+#### 5. 바이너리 파일 포함 여부 ({binary_penalty}점)
 
 {binary_feedback}
 
@@ -258,6 +280,11 @@ EOF
         "feedback": "전반적으로 좋은 코드 품질입니다.",
         "positive_aspects": ["명확한 함수명", "적절한 에러 처리"],
         "improvement_suggestions": ["주석 추가 권장", "일부 함수 분리 고려"]
+      },
+      "ci_status_check": {
+        "penalty": 0,
+        "feedback": "모든 CI가 통과했습니다.",
+        "ci_passed": true
       },
       "binary_file_check": {
         "penalty": 0,
