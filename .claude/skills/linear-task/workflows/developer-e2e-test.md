@@ -98,33 +98,24 @@ EOF
 )"
 ```
 
-### Step 5: PR 생성
+### Step 5: PR 생성 + Linear 코멘트
 
-```bash
-cd /tmp/{repo_name}
-git push -u origin {branch_name}
+`pr-creator` subagent를 호출하여 PR 생성과 Linear 코멘트를 처리합니다.
 
-gh pr create --title "{PR 제목}" --body "$(cat <<'EOF'
-## Summary
-{변경 사항 요약}
-
-> **Note**: 이 PR은 E2E 테스트 스펙을 skip 상태로 작성합니다.
-> 실제 구현 PR에서 skip이 제거되고 테스트가 활성화됩니다.
-
-## E2E Test Cases (Skipped)
-{skip된 테스트 케이스 목록}
-
-## Changes
-{변경 파일 목록}
-
-## Session Info
-**Claude Session ID**: `{session_id}`
-
----
-Generated with Claude Code
-EOF
-)"
+**Task tool 사용**:
 ```
+subagent_type: "pr-creator"
+prompt: '{
+  "repository": "/tmp/{repo_name}",
+  "branch_name": "{branch_name}",
+  "pr_title": "{PR 제목}",
+  "pr_body": "## Summary\n{변경 사항 요약}\n\n> **Note**: 이 PR은 E2E 테스트 스펙을 skip 상태로 작성합니다.\n> 실제 구현 PR에서 skip이 제거되고 테스트가 활성화됩니다.\n\n## E2E Test Cases (Skipped)\n{skip된 테스트 케이스 목록}\n\n## Changes\n{변경 파일 목록}\n\n## Session Info\n**Claude Session ID**: `{session_id}`\n\n---\nGenerated with Claude Code",
+  "issue_id": "{issue_id}",
+  "session_id": "{session_id}"
+}'
+```
+
+**기대 출력**: PR URL, PR number, Linear 코멘트 작성 여부
 
 ### Step 6: ci-validator 호출
 

@@ -110,32 +110,24 @@ EOF
 )"
 ```
 
-### Step 6: PR 생성
+### Step 6: PR 생성 + Linear 코멘트
 
-Commit 생성 후 바로 PR을 생성합니다 (로컬 테스트 생략):
+Commit 생성 후 바로 `pr-creator` subagent를 호출하여 PR 생성과 Linear 코멘트를 처리합니다 (로컬 테스트 생략):
 
-```bash
-cd /tmp/{repo_name}
-git push -u origin {branch_name}
-
-gh pr create --title "{PR 제목}" --body "$(cat <<'EOF'
-## Summary
-{변경 사항 요약}
-
-## Changes
-{변경 파일 목록}
-
-## Test Plan
-{테스트 계획}
-
-## Session Info
-**Claude Session ID**: `{session_id}`
-
----
-Generated with Claude Code
-EOF
-)"
+**Task tool 사용**:
 ```
+subagent_type: "pr-creator"
+prompt: '{
+  "repository": "/tmp/{repo_name}",
+  "branch_name": "{branch_name}",
+  "pr_title": "{PR 제목}",
+  "pr_body": "## Summary\n{변경 사항 요약}\n\n## Changes\n{변경 파일 목록}\n\n## Test Plan\n{테스트 계획}\n\n## Session Info\n**Claude Session ID**: `{session_id}`\n\n---\nGenerated with Claude Code",
+  "issue_id": "{issue_id}",
+  "session_id": "{session_id}"
+}'
+```
+
+**기대 출력**: PR URL, PR number, Linear 코멘트 작성 여부
 
 ### Step 7: ci-validator 호출
 
