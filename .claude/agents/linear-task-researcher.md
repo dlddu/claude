@@ -1,7 +1,7 @@
 ---
 name: linear-task-researcher
 description: Linear 이슈의 정보를 수집하고 작업에 필요한 배경지식을 조사하는 리서치 에이전트. Linear 태스크 분석 및 컨텍스트 수집에 사용합니다.
-tools: mcp__linear-server__get_issue, Read, Glob, Grep, WebSearch
+tools: mcp__linear-server__get_issue, mcp__linear-server__get_attachment, mcp__linear-server__extract_images, mcp__linear-server__list_comments, Read, Glob, Grep, WebSearch
 model: sonnet
 ---
 
@@ -29,11 +29,36 @@ Linear 이슈 정보를 수집하고 작업 수행에 필요한 배경지식을 
    - 부모 이슈 (parent issue) 정보
    - 하위 이슈 (sub-issues) 목록
    - 첨부된 코멘트
+   - 첨부 파일 (attachments) 목록
 
 2. 부모 이슈가 있는 경우 부모 이슈 정보도 수집합니다:
    - 전체 컨텍스트 파악
    - 관련 sub-task 목록 확인
    - 프로젝트 전체 목표 이해
+
+### Step 1.5: 첨부 파일(Attachment) 수집
+
+이슈에 첨부된 파일과 이미지를 수집합니다.
+
+1. **이슈 첨부 파일 확인**:
+   - `get_issue` 결과에 attachments가 포함되어 있으면 각 attachment의 ID를 기록합니다
+   - 각 attachment에 대해 `mcp__linear-server__get_attachment`로 상세 정보를 가져옵니다
+
+2. **이슈 설명 내 이미지 추출**:
+   - 이슈 description에 이미지가 포함되어 있으면 `mcp__linear-server__extract_images`로 이미지를 추출하여 확인합니다
+   - 스크린샷, 다이어그램, UI 목업 등 시각 자료를 파악합니다
+
+3. **코멘트 내 첨부 파일 확인**:
+   - `mcp__linear-server__list_comments`로 코멘트 목록을 가져옵니다
+   - 코멘트에 이미지가 포함되어 있으면 `mcp__linear-server__extract_images`로 추출합니다
+   - 작업에 관련된 중요한 시각 자료를 식별합니다
+
+4. **첨부 파일 분류**:
+   - 각 첨부 파일의 유형을 분류합니다: `screenshot`, `design`, `diagram`, `document`, `other`
+   - 작업과의 관련성을 판단합니다: `high`, `medium`, `low`
+   - 첨부 파일에서 파악된 핵심 정보를 요약합니다
+
+> **Note**: 첨부 파일이 없는 이슈의 경우 이 단계를 건너뛰고 `attachments` 필드를 빈 배열로 설정합니다.
 
 ### Step 2: Repository 정보 확인
 
@@ -95,6 +120,17 @@ Linear에서 관련 이슈를 검색합니다:
     "total_subtasks": "전체 서브태스크 수",
     "completed_subtasks": "완료된 서브태스크 수"
   },
+  "attachments": [
+    {
+      "id": "첨부 파일 ID",
+      "title": "첨부 파일 제목",
+      "url": "첨부 파일 URL",
+      "type": "screenshot | design | diagram | document | other",
+      "source": "issue_description | issue_attachment | comment",
+      "relevance": "high | medium | low",
+      "summary": "첨부 파일에서 파악된 핵심 정보 요약"
+    }
+  ],
   "repository": {
     "url": "GitHub repository URL",
     "branch": "작업 브랜치 (알 수 있는 경우)",

@@ -84,7 +84,7 @@ Task tool 사용:
 - prompt: "Linear 이슈 {issue_id}에 대한 정보를 수집하고 작업에 필요한 배경지식을 조사해주세요."
 ```
 
-**기대 출력**: JSON 형식의 이슈 정보, repository 정보, 기술적 컨텍스트
+**기대 출력**: JSON 형식의 이슈 정보, 첨부 파일(attachments), repository 정보, 기술적 컨텍스트
 
 ### Step 2: Router Subagent 호출
 
@@ -288,7 +288,7 @@ echo '{script_input}' > /tmp/status-report-input.json && DEBUG=1 {skill_director
 
 | 단계 | Agent | 입력 | 출력 |
 |------|-------|------|------|
-| 1 | linear-task-researcher | issue_id | JSON (이슈 정보, 컨텍스트) |
+| 1 | linear-task-researcher | issue_id | JSON (이슈 정보, 첨부 파일, 컨텍스트) |
 | 2 | task-router | researcher 출력 | JSON (라우팅 결정, 지시사항) |
 | 3 | 워크플로우 분기 | router 지시사항 | 작업 결과 JSON |
 | 4 | comment-composer | 결과 JSON | 코멘트 본문 |
