@@ -168,6 +168,11 @@ prompt: "다음 PR에 대한 리뷰를 수행해주세요:
     description: {issue_info.description}
     acceptance_criteria: {work_summary.acceptance_criteria}
     key_requirements: {work_summary.key_requirements}
+
+  감점 항목 (기본 점수에서 차감):
+  - 바이너리 파일 포함: 0 ~ -20점
+  - **CI 미통과: -100점 (예외 없음)** — CI가 통과하지 않은 경우 자동 블로킹. 어떠한 사유(flaky test, 환경 문제, 인프라 장애 등)로도 면제 불가.
+
   Session ID: {session_id}"
 ```
 
