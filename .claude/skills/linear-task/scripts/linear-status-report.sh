@@ -111,12 +111,14 @@ debug_log "대상 상태 결정 완료: TARGET_STATE_NAME=$TARGET_STATE_NAME"
 linear_api() {
     local query="$1"
     debug_log "Linear API 호출 중... (요청 크기: ${#query})"
-    local response
-    response=$(curl -s -X POST "$LINEAR_API_URL" \
+    local raw_response http_code response
+    raw_response=$(curl -s -w '\n%{http_code}' -X POST "$LINEAR_API_URL" \
         -H "Content-Type: application/json" \
         -H "Authorization: $LINEAR_API_KEY" \
         -d "$query")
-    debug_log "Linear API 응답 수신 (응답 크기: ${#response})"
+    http_code=$(echo "$raw_response" | tail -1)
+    response=$(echo "$raw_response" | sed '$d')
+    debug_log "Linear API 응답 수신 (HTTP 상태 코드: $http_code, 응답 크기: ${#response})"
     echo "$response"
 }
 
