@@ -62,9 +62,11 @@ create_curl_mock() {
 #!/bin/bash
 # curl mock - stdin과 인자를 분석하여 적절한 응답 반환
 BODY=""
+WRITE_OUT=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -d) BODY="$2"; shift 2 ;;
+        -w) WRITE_OUT="$2"; shift 2 ;;
         *) shift ;;
     esac
 done
@@ -131,6 +133,11 @@ EOF
     cat >> "$MOCK_CURL" << 'MOCK_END'
 else
     echo '{"errors":[{"message":"Unknown query"}]}'
+fi
+
+# -w 옵션 처리 (예: '\n%{http_code}' → '\n200')
+if [[ -n "$WRITE_OUT" ]]; then
+    printf '%s' "$WRITE_OUT" | sed 's/%{http_code}/200/g'
 fi
 MOCK_END
 
@@ -813,9 +820,11 @@ setup
 cat > "$MOCK_CURL" << 'EOF'
 #!/bin/bash
 BODY=""
+WRITE_OUT=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -d) BODY="$2"; shift 2 ;;
+        -w) WRITE_OUT="$2"; shift 2 ;;
         *) shift ;;
     esac
 done
@@ -823,6 +832,9 @@ if printf '%s' "$BODY" | grep -q "workflowStates"; then
     echo '{"errors":[{"message":"Invalid \"team_id\" format: expected UUID"}]}'
 else
     echo '{"errors":[{"message":"Unknown"}]}'
+fi
+if [[ -n "$WRITE_OUT" ]]; then
+    printf '%s' "$WRITE_OUT" | sed 's/%{http_code}/200/g'
 fi
 EOF
 chmod +x "$MOCK_CURL"
