@@ -1,7 +1,7 @@
 ---
 name: pr-creator
 description: PR 생성 및 Linear 이슈에 PR 링크 코멘트를 작성하는 에이전트. git push, gh pr create, Linear 코멘트를 하나의 단위로 처리합니다.
-tools: Bash(git:*), Bash(gh:*), mcp__linear-server__create_comment
+tools: Bash(git:*), Bash(gh:*), mcp__linear-server__save_comment
 model: haiku
 ---
 
@@ -51,7 +51,7 @@ PR URL과 PR number를 출력에서 캡처합니다.
 
 PR이 성공적으로 생성된 경우, Linear 이슈에 PR 링크 코멘트를 작성합니다.
 
-**mcp__linear-server__create_comment 도구 사용**:
+**mcp__linear-server__save_comment 도구 사용**:
 - issueId: `{issue_id}`
 - body: 아래 형식의 Markdown
 

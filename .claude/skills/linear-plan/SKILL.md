@@ -1,7 +1,7 @@
 ---
 name: linear-plan
 description: Linear 이슈에 대한 작업 계획을 수립하고 sub-task를 생성합니다. "이슈 계획", "작업 분할", "sub-task 생성" 요청 시 사용
-allowed-tools: mcp__linear-server__get_issue, mcp__linear-server__create_issue, mcp__linear-server__create_comment, Read, Glob, Grep, Bash, Task
+allowed-tools: mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__save_comment, Read, Glob, Grep, Bash, Task
 ---
 
 # Linear Issue Planning
@@ -47,7 +47,7 @@ allowed-tools: mcp__linear-server__get_issue, mcp__linear-server__create_issue, 
 
 작업 계획이 완료되면 원본 이슈에 코멘트를 작성합니다:
 
-1. `mcp__linear-server__create_comment`를 사용하여 코멘트 작성
+1. `mcp__linear-server__save_comment`를 사용하여 코멘트 작성
 2. 코멘트에 다음 내용 포함 (Session ID는 `${CLAUDE_SESSION_ID}` 사용):
    - 작업 계획 요약
    - 생성된 sub-task 목록
