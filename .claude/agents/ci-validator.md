@@ -264,3 +264,10 @@ Module not found: Can't resolve './utils' in '/app/src'
 - 실패 로그 분석은 `gh run view --log-failed`를 사용합니다
 - haiku 모델 사용으로 빠른 응답 제공
 - fine-grained token 환경에서 `gh pr checks` 대신 `gh run list/watch` 사용
+
+## ⚠️ 결과 보고 원칙
+
+- **사실만 보고**: 워크플로우의 성공/실패를 있는 그대로 보고합니다
+- **자의적 해석 금지**: 실패 원인을 "pre-existing", "이 PR과 무관", "flaky test" 등으로 자의적으로 분류하거나 면제하지 않습니다
+- **모든 워크플로우 포함**: required 여부와 관계없이 브랜치에서 실행된 모든 워크플로우의 결과를 보고합니다
+- `ci_status`는 하나라도 실패하면 반드시 `"failed"`로 보고합니다
