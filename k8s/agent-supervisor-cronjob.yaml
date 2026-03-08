@@ -72,6 +72,12 @@ spec:
                       name: agent-supervisor-secrets
                       key: AWS_S3_BUCKET_NAME
                       optional: true
+                - name: AWS_S3_PATH_PREFIX
+                  valueFrom:
+                    secretKeyRef:
+                      name: agent-supervisor-secrets
+                      key: AWS_S3_PATH_PREFIX
+                      optional: true
           containers:
             - name: agent-supervisor
               image: ghcr.io/dlddu/claude:latest

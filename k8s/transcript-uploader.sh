@@ -34,6 +34,15 @@ check_aws_credentials() {
     return 0
 }
 
+build_s3_path() {
+    local suffix="$1"
+    if [[ -n "${AWS_S3_PATH_PREFIX:-}" ]]; then
+        echo "s3://${AWS_S3_BUCKET_NAME}/${AWS_S3_PATH_PREFIX}/${suffix}"
+    else
+        echo "s3://${AWS_S3_BUCKET_NAME}/${suffix}"
+    fi
+}
+
 upload_transcript() {
     local transcript_file="$1"
     local session_id
@@ -46,9 +55,11 @@ upload_transcript() {
         return 1
     fi
 
+    local s3_dest
     # Upload main transcript
-    if aws s3 cp "$transcript_file" "s3://${AWS_S3_BUCKET_NAME}/${session_id}.jsonl" --region "$AWS_REGION" 2>/dev/null; then
-        log "Uploaded $transcript_file -> s3://${AWS_S3_BUCKET_NAME}/${session_id}.jsonl"
+    s3_dest=$(build_s3_path "${session_id}.jsonl")
+    if aws s3 cp "$transcript_file" "$s3_dest" --region "$AWS_REGION" 2>/dev/null; then
+        log "Uploaded $transcript_file -> $s3_dest"
     else
         log_error "Failed to upload $transcript_file"
         return 1
@@ -59,8 +70,9 @@ upload_transcript() {
     local subagents_dir="$session_dir/subagents"
 
     if [[ -d "$subagents_dir" ]]; then
-        if aws s3 cp "$subagents_dir" "s3://${AWS_S3_BUCKET_NAME}/${session_id}/" --recursive --region "$AWS_REGION" 2>/dev/null; then
-            log "Uploaded subagents -> s3://${AWS_S3_BUCKET_NAME}/${session_id}/"
+        s3_dest=$(build_s3_path "${session_id}/")
+        if aws s3 cp "$subagents_dir" "$s3_dest" --recursive --region "$AWS_REGION" 2>/dev/null; then
+            log "Uploaded subagents -> $s3_dest"
         else
             log_error "Failed to upload subagents for $session_id"
         fi
@@ -103,6 +115,10 @@ main() {
 
     if ! check_aws_credentials; then
         exit 1
+    fi
+
+    if [[ -n "${AWS_S3_PATH_PREFIX:-}" ]]; then
+        log "S3 path prefix: ${AWS_S3_PATH_PREFIX}"
     fi
 
     log "AWS credentials verified. Watching for transcripts..."
