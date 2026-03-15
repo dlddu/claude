@@ -112,7 +112,7 @@ EOF
 
 ### Step 6: PR 생성 + Linear 코멘트
 
-Commit 생성 후 바로 `pr-creator` subagent를 호출하여 PR 생성과 Linear 코멘트를 처리합니다 (로컬 테스트 생략):
+Commit 생성 후 바로 `pr-creator` subagent를 호출하여 PR을 생성합니다 (로컬 테스트 생략):
 
 **Task tool 사용**:
 ```
@@ -127,7 +127,12 @@ prompt: '{
 }'
 ```
 
-**기대 출력**: PR URL, PR number, Linear 코멘트 작성 여부
+**기대 출력**: PR URL, PR number
+
+**Linear 코멘트 작성** (orchestrator에서 직접 수행):
+PR 생성 성공 후, orchestrator가 `mcp__linear-server__save_comment`를 직접 호출하여 PR 링크 코멘트를 작성합니다:
+- issueId: `{issue_id}`
+- body: `## Pull Request\n\n**PR**: {pr_url}\n**Branch**: \`{branch_name}\``
 
 ### Step 7: ci-validator 호출
 

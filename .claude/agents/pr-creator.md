@@ -1,7 +1,7 @@
 ---
 name: pr-creator
 description: PR 생성 및 Linear 이슈에 PR 링크 코멘트를 작성하는 에이전트. git push, gh pr create, Linear 코멘트를 하나의 단위로 처리합니다.
-tools: Bash(git:*), Bash(gh:*), mcp__linear-server__save_comment
+tools: Bash(git:*), Bash(gh:*)
 model: haiku
 ---
 
@@ -47,22 +47,11 @@ EOF
 
 PR URL과 PR number를 출력에서 캡처합니다.
 
-### Step 3: Linear 코멘트 작성
+### Step 3: PR 결과 반환
 
-PR이 성공적으로 생성된 경우, Linear 이슈에 PR 링크 코멘트를 작성합니다.
+PR이 성공적으로 생성된 경우, PR URL과 number를 결과에 포함합니다.
 
-**mcp__linear-server__save_comment 도구 사용**:
-- issueId: `{issue_id}`
-- body: 아래 형식의 Markdown
-
-```markdown
-## Pull Request
-
-**PR**: {pr_url}
-**Branch**: `{branch_name}`
-```
-
-**에러 처리**: 코멘트 생성 실패 시에도 PR 생성은 성공으로 처리합니다.
+> **Note**: Linear 이슈에 PR 링크 코멘트를 작성하는 것은 **orchestrator**가 이 subagent의 결과를 받은 후 `mcp__linear-server__save_comment`를 직접 호출하여 처리합니다. subagent에서는 MCP 도구를 사용할 수 없으므로 이 단계는 orchestrator에서 수행됩니다.
 
 ## Output Format
 
@@ -118,7 +107,7 @@ PR이 성공적으로 생성된 경우, Linear 이슈에 PR 링크 코멘트를 
 |------|------------|
 | git push | 1회 재시도 후 실패 반환 |
 | gh pr create | 실패 반환 |
-| Linear 코멘트 | 경고 로그, PR 결과는 성공 유지 |
+| Linear 코멘트 | orchestrator에서 처리 (subagent 범위 밖) |
 
 ## Important Notes
 

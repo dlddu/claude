@@ -177,7 +177,7 @@ prompt: "로컬에서 테스트/린트/타입체크/빌드를 검증해주세요
 
 ### Step 8: PR 생성 + Linear 코멘트
 
-로컬 테스트 통과 후, `pr-creator` subagent를 호출하여 PR 생성과 Linear 코멘트를 처리합니다.
+로컬 테스트 통과 후, `pr-creator` subagent를 호출하여 PR을 생성합니다.
 
 **Task tool 사용**:
 ```
@@ -192,7 +192,12 @@ prompt: '{
 }'
 ```
 
-**기대 출력**: PR URL, PR number, Linear 코멘트 작성 여부
+**기대 출력**: PR URL, PR number
+
+**Linear 코멘트 작성** (orchestrator에서 직접 수행):
+PR 생성 성공 후, orchestrator가 `mcp__linear-server__save_comment`를 직접 호출하여 PR 링크 코멘트를 작성합니다:
+- issueId: `{issue_id}`
+- body: `## Pull Request\n\n**PR**: {pr_url}\n**Branch**: \`{branch_name}\``
 
 ### Step 9: ci-validator 호출
 

@@ -1,7 +1,7 @@
 ---
 name: linear-task
 description: Linear 이슈에 대한 작업을 수행합니다. Subagent들을 orchestration하여 리서치, 라우팅, 실행을 자동화합니다. "태스크 작업", "이슈 처리", "Linear 작업" 요청 시 사용
-allowed-tools: mcp__linear-server__get_issue, mcp__linear-server__get_attachment, mcp__linear-server__extract_images, mcp__linear-server__save_comment, Task, Bash, TodoWrite, WebSearch, Read
+allowed-tools: mcp__linear-server__get_issue, mcp__linear-server__get_attachment, mcp__linear-server__extract_images, mcp__linear-server__list_comments, mcp__linear-server__save_comment, Task, Bash, TodoWrite, WebSearch, Read
 ---
 
 # Linear Task Orchestration Skill
@@ -73,15 +73,75 @@ Linear 이슈에 작업 시작 코멘트를 생성합니다.
 
 이 Session ID는 최종 완료 코멘트에도 포함됩니다.
 
-### Step 1: Researcher Subagent 호출
+### Step 1: Linear 데이터 Pre-fetch + Researcher Subagent 호출
 
-`linear-task-researcher` subagent를 Task tool로 호출합니다.
+MCP 도구는 subagent에서 사용할 수 없으므로, **orchestrator에서 먼저 Linear 데이터를 수집**한 후 researcher subagent에 전달합니다.
+
+#### Step 1a: Linear 데이터 수집 (Orchestrator에서 직접 수행)
+
+다음 MCP 도구들을 호출하여 데이터를 수집합니다:
+
+1. **이슈 정보 가져오기**:
+   ```
+   mcp__linear-server__get_issue:
+   - id: {issue_id}
+   - includeRelations: true
+   ```
+
+2. **코멘트 목록 가져오기**:
+   ```
+   mcp__linear-server__list_comments:
+   - issueId: {issue_id}
+   ```
+
+3. **부모 이슈 가져오기** (부모 이슈가 있는 경우):
+   ```
+   mcp__linear-server__get_issue:
+   - id: {parent_issue_id}
+   ```
+
+4. **첨부 파일 상세 가져오기** (attachments가 있는 경우):
+   ```
+   각 attachment ID에 대해:
+   mcp__linear-server__get_attachment:
+   - id: {attachment_id}
+   ```
+
+5. **이슈 설명 내 이미지 추출** (description에 이미지가 있는 경우):
+   ```
+   mcp__linear-server__extract_images:
+   - markdown: {issue_description}
+   ```
+
+> **Tip**: 독립적인 호출들(get_issue, list_comments)은 병렬로 수행하여 속도를 높입니다.
+
+#### Step 1b: Researcher Subagent 호출
+
+수집한 데이터를 researcher subagent에 전달합니다.
 
 **호출 방법**:
 ```
-Task tool 사용:
+Agent tool 사용:
 - subagent_type: "linear-task-researcher"
-- prompt: "Linear 이슈 {issue_id}에 대한 정보를 수집하고 작업에 필요한 배경지식을 조사해주세요."
+- prompt: |
+    Linear 이슈에 대한 정보를 분석하고 작업에 필요한 배경지식을 조사해주세요.
+
+    ## Pre-fetched Linear Data
+
+    ### Issue Data:
+    {issue_data_json}
+
+    ### Comments:
+    {comments_data_json}
+
+    ### Parent Issue (없으면 생략):
+    {parent_issue_data_json}
+
+    ### Attachment Details (없으면 생략):
+    {attachment_details_json}
+
+    ### Extracted Images (없으면 생략):
+    {extracted_images_json}
 ```
 
 **기대 출력**: JSON 형식의 이슈 정보, 첨부 파일(attachments), repository 정보, 기술적 컨텍스트
@@ -249,9 +309,13 @@ echo '{script_input}' > /tmp/status-report-input.json && DEBUG=1 {skill_director
 
 ## Error Handling
 
-### Researcher 실패 시
-- Linear API 접근 문제인지 확인
+### Linear 데이터 Pre-fetch 실패 시 (Step 1a)
+- Linear MCP 서버 연결 상태 확인
 - 이슈 ID가 올바른지 확인
+- MCP 도구 호출이 실패하면 실패 사유와 함께 In Review 상태로 전환
+
+### Researcher 실패 시 (Step 1b)
+- 전달한 데이터 형식 확인
 - 실패 사유와 함께 In Review 상태로 전환
 
 ### Router 실패 시
