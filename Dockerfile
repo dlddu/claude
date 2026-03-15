@@ -36,8 +36,9 @@ RUN ARCH=$(dpkg --print-architecture) \
     && chmod +x kubectl \
     && mv kubectl /usr/local/bin/
 
-# Install Claude Code CLI
-RUN npm install -g @anthropic-ai/claude-code
+# Install Claude Code CLI (native binary)
+RUN curl -fsSL https://claude.ai/install.sh | bash -s stable
+ENV PATH="/root/.local/bin:${PATH}"
 
 # Set working directory
 WORKDIR /app

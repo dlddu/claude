@@ -51,7 +51,6 @@
 		}
 	],
 	"containerEnv": {
-		"SKIP_SESSION_HOOKS": "true",
 		"GH_TOKEN": ""
 	}
 }
