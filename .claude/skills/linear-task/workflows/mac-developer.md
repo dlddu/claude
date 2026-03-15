@@ -64,7 +64,9 @@ subagent_type: "codebase-analyzer"
 prompt: "다음 repository의 코드베이스를 분석해주세요:
   Repository: /tmp/{repo_name}
   작업 설명: {task_description}
-  관련 영역: {target_areas}"
+  관련 영역: {target_areas}
+
+  **Mac Native 전용 프로젝트입니다. 크로스 플랫폼 호환성을 고려하지 마세요. Apple 네이티브 API와 프레임워크만 사용하고, 플랫폼 추상화 없이 대상 플랫폼에 최적화된 코드를 작성하세요.**"
 ```
 
 **기대 출력**: 프로젝트 정보, 디렉토리 구조, 테스트 구조, 코드 패턴
@@ -78,7 +80,9 @@ prompt: "다음 기능에 대한 테스트를 작성해주세요:
   Repository: /tmp/{repo_name}
   코드베이스 분석: {codebase_analysis}
   기능 요구사항: {feature_spec}
-  완료 기준: {acceptance_criteria}"
+  완료 기준: {acceptance_criteria}
+
+  **Mac Native 전용 프로젝트입니다. 크로스 플랫폼 호환성을 고려하지 마세요. Apple 네이티브 API와 프레임워크만 사용하고, 플랫폼 추상화 없이 대상 플랫폼에 최적화된 코드를 작성하세요. 테스트 프레임워크는 XCTest 또는 Swift Testing을 사용하세요. UI 테스트가 필요한 경우 XCUITest(XCUIApplication, XCUIElement)를 사용하고, UI 요소에는 accessibilityIdentifier를 설정하세요. Appium 등 크로스 플랫폼 UI 테스트 도구는 사용하지 마세요.**"
 ```
 
 **기대 출력**: 생성된 테스트 파일, 테스트 케이스 목록, GitHub Actions 변경사항
@@ -92,7 +96,9 @@ prompt: "테스트를 통과시키는 구현 코드를 작성해주세요:
   Repository: /tmp/{repo_name}
   코드베이스 분석: {codebase_analysis}
   테스트 정보: {test_spec}
-  구현 힌트: {implementation_hints}"
+  구현 힌트: {implementation_hints}
+
+  **Mac Native 전용 프로젝트입니다. 크로스 플랫폼 호환성을 고려하지 마세요. Apple 네이티브 API와 프레임워크만 사용하고, 플랫폼 추상화 없이 대상 플랫폼에 최적화된 코드를 작성하세요.**"
 ```
 
 **기대 출력**: 생성/수정된 파일, 구현 요약
@@ -280,6 +286,34 @@ git push origin --delete {branch_name}
 gh pr close {pr_number}
 ```
 
+## Mac Native Development Guidelines
+
+이 워크플로우는 **Mac/Apple 네이티브 개발 전용**입니다. 모든 subagent 호출 시 다음 원칙을 반드시 전달합니다:
+
+1. **크로스 플랫폼 고려 금지**: 플랫폼 추상화 레이어, 크로스 플랫폼 라이브러리(예: Kotlin Multiplatform, Flutter, React Native 등) 사용을 고려하지 않습니다
+2. **Apple 네이티브 API 우선**: SwiftUI, UIKit, AppKit, Foundation, Combine, Core Data, Swift Concurrency 등 Apple 네이티브 프레임워크를 직접 사용합니다
+3. **플랫폼 특화 구현**: `#if os(macOS)`, `#if os(iOS)` 등의 조건부 컴파일로 멀티 플랫폼을 처리하지 않습니다. 대상 플랫폼(macOS/iOS 등)에 맞는 코드만 작성합니다
+4. **네이티브 테스트 프레임워크**: XCTest, Swift Testing 등 Apple 네이티브 테스트 프레임워크를 사용합니다
+5. **CI 환경**: GitHub Actions에서 `runs-on: macos-latest`를 사용하고, Xcode 빌드/테스트 환경을 전제합니다
+6. **UI 테스트**: XCUITest(XCUIApplication, XCUIElement)를 사용합니다. Appium, Selenium 등 크로스 플랫폼 UI 테스트 도구를 사용하지 않습니다
+
+### UI 테스트 가이드라인
+
+Mac native 프로젝트의 UI 테스트는 Apple 네이티브 프레임워크만 사용합니다:
+
+- **Unit 테스트**: XCTest 또는 Swift Testing으로 ViewModel, Model 로직 검증
+- **UI 테스트**: XCUITest로 UI 인터랙션 검증 (XCUIApplication, XCUIElement, XCUIElementQuery 사용)
+- **Snapshot 테스트**: 필요 시 프로젝트에서 사용 중인 네이티브 스냅샷 라이브러리 활용
+- **접근성 식별자**: UI 요소에 `accessibilityIdentifier`를 설정하여 테스트에서 안정적으로 요소를 찾도록 합니다
+- **테스트 타겟 구조**: Xcode 프로젝트의 기존 UI 테스트 타겟(`*UITests`)에 테스트를 추가합니다. 없으면 새로 생성합니다
+- **CI에서 UI 테스트 실행**: `xcodebuild test` 명령으로 `-destination 'platform=macOS'` 또는 `-destination 'platform=iOS Simulator,name=iPhone 16'` 등 적절한 destination을 지정합니다
+
+### Subagent 호출 시 포함할 지침
+
+모든 subagent(codebase-analyzer, test-writer, code-writer) 호출 프롬프트에 다음 문구를 반드시 포함합니다:
+
+> **Mac Native 전용 프로젝트입니다. 크로스 플랫폼 호환성을 고려하지 마세요. Apple 네이티브 API와 프레임워크만 사용하고, 플랫폼 추상화 없이 대상 플랫폼에 최적화된 코드를 작성하세요.**
+
 ## Important Notes
 
 1. **TDD 원칙 준수**: 테스트를 먼저 작성하고, 테스트 통과를 위한 최소 구현
@@ -288,3 +322,4 @@ gh pr close {pr_number}
 4. **컨텍스트 전달**: 각 단계의 출력을 다음 단계에 완전히 전달
 5. **기존 패턴 존중**: 프로젝트의 기존 코드 스타일과 패턴 따르기
 6. **새 브랜치 작업**: main/master에 직접 push 금지
+7. **Mac Native 전용**: 크로스 플랫폼을 고려하지 않고 Apple 네이티브 기준으로 개발
