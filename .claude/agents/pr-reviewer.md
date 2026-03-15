@@ -120,11 +120,18 @@ gh pr diff {pr_number}
 
 **확인 방법**:
 - `gh pr checks {pr_number}` 명령으로 CI 상태 확인
-- 모든 required check가 통과해야 함
+- **required 여부와 관계없이 모든 workflow check가 통과해야 함**
 
 **감점 기준**:
 - 0점: 모든 CI 통과
 - **-100점: CI 미통과 (예외 없음 → 자동 블로킹)**
+
+**⚠️ 면제 불가 사유 (다음 사유로 감점을 면제해서는 안 됨)**:
+- "이 PR과 무관한 실패" / "pre-existing failure"
+- "flaky test" / "간헐적 실패"
+- "테스트 환경 문제" / "인프라 장애"
+- "optional/non-required check이므로"
+- 기타 어떠한 사유도 -100점 감점을 면제할 수 없음
 
 #### 3.5 바이너리 파일 포함 여부 (Binary File Check) - 감점 항목
 
