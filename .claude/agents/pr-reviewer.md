@@ -121,16 +121,19 @@ gh pr diff {pr_number}
 **확인 방법**:
 - `gh pr checks {pr_number}` 명령으로 CI 상태 확인
 - **required 여부와 관계없이 모든 workflow check가 통과해야 함**
+- **⚠️ CI가 cancelled(취소) 상태인 경우에도 실패로 간주합니다. cancelled ≠ pass입니다.**
 
 **감점 기준**:
 - 0점: 모든 CI 통과
 - **-100점: CI 미통과 (예외 없음 → 자동 블로킹)**
+- **-100점: CI cancelled/취소 (실패와 동일하게 처리 → 자동 블로킹)**
 
 **⚠️ 면제 불가 사유 (다음 사유로 감점을 면제해서는 안 됨)**:
 - "이 PR과 무관한 실패" / "pre-existing failure"
 - "flaky test" / "간헐적 실패"
 - "테스트 환경 문제" / "인프라 장애"
 - "optional/non-required check이므로"
+- "CI가 취소(cancelled)되었을 뿐 실패가 아니므로" — **cancelled도 실패입니다**
 - 기타 어떠한 사유도 -100점 감점을 면제할 수 없음
 
 #### 3.5 바이너리 파일 포함 여부 (Binary File Check) - 감점 항목
