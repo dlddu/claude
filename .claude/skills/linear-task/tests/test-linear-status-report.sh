@@ -73,7 +73,7 @@ done
 
 # GraphQL 쿼리에서 작업 유형 판별
 if printf '%s' "$BODY" | grep -q "workflowStates"; then
-    # Step 1: 상태 조회
+    # Step 1b: 상태 조회
 MOCK_SCRIPT
 
     case "$mock_type" in
@@ -131,6 +131,9 @@ EOF
     esac
 
     cat >> "$MOCK_CURL" << 'MOCK_END'
+elif printf '%s' "$BODY" | grep -q 'issue(id'; then
+    # Step 1a: 이슈에서 팀 UUID 조회
+    echo '{"data":{"issue":{"team":{"id":"00000000-0000-0000-0000-000000000001"}}}}'
 else
     echo '{"errors":[{"message":"Unknown query"}]}'
 fi

@@ -122,9 +122,36 @@ linear_api() {
     echo "$response"
 }
 
-# --- Step 1: 팀 워크플로우 상태 조회 ---
-debug_log "--- Step 1: 팀 워크플로우 상태 조회 시작 (TEAM_ID=$TEAM_ID) ---"
-STATES_QUERY=$(jq -n --arg tid "$TEAM_ID" '{
+# --- Step 1: 팀 UUID 조회 및 워크플로우 상태 조회 ---
+# TEAM_ID가 UUID 형식이 아닌 경우 (예: "DLD" 같은 팀 key), 이슈에서 팀 UUID를 조회
+debug_log "--- Step 1a: 팀 UUID 확인 (TEAM_ID=$TEAM_ID) ---"
+TEAM_UUID="$TEAM_ID"
+if ! echo "$TEAM_ID" | grep -qE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+    debug_log "TEAM_ID가 UUID 형식이 아님, 이슈에서 팀 UUID 조회 중..."
+    TEAM_QUERY=$(jq -n --arg iid "$ISSUE_ID" '{
+        query: "query($issueId: String!) { issue(id: $issueId) { team { id } } }",
+        variables: { issueId: $iid }
+    }')
+    TEAM_RESPONSE=$(linear_api "$TEAM_QUERY")
+
+    if echo "$TEAM_RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
+        ERROR_MSG=$(echo "$TEAM_RESPONSE" | jq -r '.errors[0].message // "팀 UUID 조회 실패"')
+        debug_log "ERROR: 팀 UUID 조회 실패 - $ERROR_MSG"
+        jq -nc --arg iid "$ISSUE_ID" --arg err "$ERROR_MSG" '{success:false,issue_id:$iid,status_updated:false,comment_created:false,error:$err,error_stage:"status_lookup",summary:("팀 UUID 조회 실패: "+$err)}'
+        exit 1
+    fi
+
+    TEAM_UUID=$(echo "$TEAM_RESPONSE" | jq -r '.data.issue.team.id // empty')
+    if [[ -z "$TEAM_UUID" ]]; then
+        debug_log "ERROR: 이슈에서 팀 UUID를 찾을 수 없음"
+        jq -nc --arg iid "$ISSUE_ID" '{success:false,issue_id:$iid,status_updated:false,comment_created:false,error:"이슈에서 팀 UUID를 찾을 수 없습니다",error_stage:"status_lookup",summary:"팀 UUID 조회 실패"}'
+        exit 1
+    fi
+    debug_log "팀 UUID 조회 완료: TEAM_UUID=$TEAM_UUID"
+fi
+
+debug_log "--- Step 1b: 팀 워크플로우 상태 조회 시작 (TEAM_UUID=$TEAM_UUID) ---"
+STATES_QUERY=$(jq -n --arg tid "$TEAM_UUID" '{
     query: "query($teamId: ID!) { workflowStates(filter: { team: { id: { eq: $teamId } } }) { nodes { id name type } } }",
     variables: { teamId: $tid }
 }')
