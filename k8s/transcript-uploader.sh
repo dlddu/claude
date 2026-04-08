@@ -10,6 +10,14 @@ CLAUDE_DIR="/root/.claude"
 SHUTDOWN_REQUESTED=false
 SLEEP_PID=""
 
+# Base credentials (saved before assuming role)
+BASE_AWS_ACCESS_KEY_ID=""
+BASE_AWS_SECRET_ACCESS_KEY=""
+# Epoch seconds when assumed-role credentials expire (0 = not yet assumed)
+ROLE_CREDS_EXPIRES_AT=0
+# Refresh assumed credentials this many seconds before expiry
+ROLE_CREDS_REFRESH_BUFFER=300
+
 log() {
     echo "$LOG_PREFIX $(date -u +"%Y-%m-%dT%H:%M:%SZ") $1"
 }
@@ -31,6 +39,47 @@ check_aws_credentials() {
         log_error "AWS credentials not configured"
         return 1
     fi
+    return 0
+}
+
+# Assume the configured IAM role and export temporary credentials.
+# No-op if AWS_ASSUME_ROLE_ARN is unset. Caches until near expiry.
+assume_role() {
+    [[ -z "${AWS_ASSUME_ROLE_ARN:-}" ]] && return 0
+
+    # Skip if current temporary credentials are still valid
+    local now
+    now=$(date +%s)
+    if (( now < ROLE_CREDS_EXPIRES_AT - ROLE_CREDS_REFRESH_BUFFER )); then
+        return 0
+    fi
+
+    # Restore base credentials to make the assume-role call
+    export AWS_ACCESS_KEY_ID="$BASE_AWS_ACCESS_KEY_ID"
+    export AWS_SECRET_ACCESS_KEY="$BASE_AWS_SECRET_ACCESS_KEY"
+    unset AWS_SESSION_TOKEN
+
+    local creds_json
+    if ! creds_json=$(aws sts assume-role \
+        --role-arn "$AWS_ASSUME_ROLE_ARN" \
+        --role-session-name "transcript-uploader-$$" \
+        --region "$AWS_REGION" 2>/dev/null); then
+        log_error "Failed to assume role: $AWS_ASSUME_ROLE_ARN"
+        return 1
+    fi
+
+    export AWS_ACCESS_KEY_ID
+    export AWS_SECRET_ACCESS_KEY
+    export AWS_SESSION_TOKEN
+    AWS_ACCESS_KEY_ID=$(echo "$creds_json" | jq -r '.Credentials.AccessKeyId')
+    AWS_SECRET_ACCESS_KEY=$(echo "$creds_json" | jq -r '.Credentials.SecretAccessKey')
+    AWS_SESSION_TOKEN=$(echo "$creds_json" | jq -r '.Credentials.SessionToken')
+
+    local expiration
+    expiration=$(echo "$creds_json" | jq -r '.Credentials.Expiration')
+    ROLE_CREDS_EXPIRES_AT=$(date -d "$expiration" +%s 2>/dev/null || echo 0)
+
+    log "Assumed role (expires at $expiration)"
     return 0
 }
 
@@ -113,6 +162,18 @@ main() {
         exit 1
     fi
 
+    # Preserve base credentials so we can re-assume the role on refresh
+    BASE_AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}"
+    BASE_AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}"
+
+    if [[ -n "${AWS_ASSUME_ROLE_ARN:-}" ]]; then
+        log "Assuming role: ${AWS_ASSUME_ROLE_ARN}"
+        if ! assume_role; then
+            log_error "Failed to assume role at startup"
+            exit 1
+        fi
+    fi
+
     if ! check_aws_credentials; then
         exit 1
     fi
@@ -125,6 +186,7 @@ main() {
 
     # Main loop
     while [[ "$SHUTDOWN_REQUESTED" == "false" ]]; do
+        assume_role || log_error "Failed to refresh assumed role credentials"
         find_and_upload_transcripts
         # Use sleep with wait to allow signal handling
         sleep "$UPLOAD_INTERVAL" &
@@ -134,6 +196,7 @@ main() {
     done
 
     # Final upload before exit
+    assume_role || log_error "Failed to refresh assumed role credentials"
     find_and_upload_transcripts
     log "Shutdown complete"
 }
