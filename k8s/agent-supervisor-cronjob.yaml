@@ -48,18 +48,7 @@ spec:
                 - name: claude-data
                   mountPath: /root/.claude
               env:
-                - name: AWS_ACCESS_KEY_ID
-                  valueFrom:
-                    secretKeyRef:
-                      name: agent-supervisor-secrets
-                      key: AWS_ACCESS_KEY_ID
-                      optional: true
-                - name: AWS_SECRET_ACCESS_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      name: agent-supervisor-secrets
-                      key: AWS_SECRET_ACCESS_KEY
-                      optional: true
+                # AWS credentials are provided by the pod's instance profile (IRSA/IMDS)
                 - name: AWS_REGION
                   valueFrom:
                     secretKeyRef:
