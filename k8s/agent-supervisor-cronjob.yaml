@@ -88,9 +88,9 @@ spec:
               resources:
                 requests:
                   cpu: "200m"
-                  memory: "1800Mi"
+                  memory: "1600Mi"
                 limits:
-                  memory: "1800Mi"
+                  memory: "1600Mi"
               env:
                 - name: LINEAR_API_KEY
                   valueFrom:
