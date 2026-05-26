@@ -48,31 +48,13 @@ spec:
                 - name: claude-data
                   mountPath: /root/.claude
               env:
-                # AWS credentials are provided by the pod's instance profile (IRSA/IMDS)
-                - name: AWS_REGION
+                # Transcript viewer upload API endpoint (required)
+                - name: TRANSCRIPT_UPLOAD_API_URL
                   valueFrom:
                     secretKeyRef:
                       name: agent-supervisor-secrets
-                      key: AWS_REGION
-                      optional: true
-                - name: AWS_S3_BUCKET_NAME
-                  valueFrom:
-                    secretKeyRef:
-                      name: agent-supervisor-secrets
-                      key: AWS_S3_BUCKET_NAME
-                      optional: true
-                - name: AWS_S3_PATH_PREFIX
-                  valueFrom:
-                    secretKeyRef:
-                      name: agent-supervisor-secrets
-                      key: AWS_S3_PATH_PREFIX
-                      optional: true
-                - name: AWS_ASSUME_ROLE_ARN
-                  valueFrom:
-                    secretKeyRef:
-                      name: agent-supervisor-secrets
-                      key: AWS_ASSUME_ROLE_ARN
-                      optional: true
+                      key: TRANSCRIPT_UPLOAD_API_URL
+                      optional: false
           containers:
             - name: agent-supervisor
               image: ghcr.io/dlddu/claude:latest

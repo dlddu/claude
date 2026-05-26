@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Transcript Uploader Sidecar
-# Uploads transcript files to S3 every 30 seconds
+# Uploads transcript files to the transcript viewer every 30 seconds
+# via its presigned-URL upload API.
 # Handles SIGTERM for graceful shutdown (K8s native sidecar)
 
 LOG_PREFIX="[transcript-uploader]"
@@ -10,10 +11,8 @@ CLAUDE_DIR="/root/.claude"
 SHUTDOWN_REQUESTED=false
 SLEEP_PID=""
 
-# Epoch seconds when assumed-role credentials expire (0 = not yet assumed)
-ROLE_CREDS_EXPIRES_AT=0
-# Refresh assumed credentials this many seconds before expiry
-ROLE_CREDS_REFRESH_BUFFER=300
+# Accepted upload file names: "<name>.jsonl" or "subagents/<name>.jsonl"
+FILE_NAME_PATTERN='^(subagents/)?[A-Za-z0-9._-]+\.jsonl$'
 
 log() {
     echo "$LOG_PREFIX $(date -u +"%Y-%m-%dT%H:%M:%SZ") $1"
@@ -31,70 +30,53 @@ shutdown_handler() {
     [[ -n "$SLEEP_PID" ]] && kill "$SLEEP_PID" 2>/dev/null
 }
 
-check_aws_credentials() {
-    if ! aws sts get-caller-identity --region "$AWS_REGION" &>/dev/null; then
-        log_error "AWS credentials not configured"
-        return 1
-    fi
-    return 0
+# URL-encode a string for safe use in URL path segments and query values.
+urlencode() {
+    jq -rn --arg s "$1" '$s|@uri'
 }
 
-# Assume the configured IAM role and export temporary credentials.
-# No-op if AWS_ASSUME_ROLE_ARN is unset. Caches until near expiry.
-# Base credentials are expected to come from an instance profile (IMDS/IRSA),
-# so any previously exported session credentials are cleared first to force
-# the AWS CLI to fall back to the instance profile for the assume-role call.
-assume_role() {
-    [[ -z "${AWS_ASSUME_ROLE_ARN:-}" ]] && return 0
+# Upload a single file to the transcript viewer using the 2-step presigned URL flow:
+#   1. POST .../api/transcripts/upload-url/<session_id>?file_name=<file_name> -> { url, method }
+#   2. <method> the file contents to the returned presigned URL
+# Args: $1 = local file path, $2 = session id, $3 = file_name (as stored by the API)
+upload_file() {
+    local file="$1"
+    local session_id="$2"
+    local file_name="$3"
 
-    # Skip if current temporary credentials are still valid
-    local now
-    now=$(date +%s)
-    if (( now < ROLE_CREDS_EXPIRES_AT - ROLE_CREDS_REFRESH_BUFFER )); then
-        return 0
-    fi
+    local request_url="${TRANSCRIPT_UPLOAD_API_URL%/}/api/transcripts/upload-url/$(urlencode "$session_id")?file_name=$(urlencode "$file_name")"
 
-    # Clear any previously assumed credentials so the CLI uses the instance profile
-    unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
-
-    local creds_json
-    if ! creds_json=$(aws sts assume-role \
-        --role-arn "$AWS_ASSUME_ROLE_ARN" \
-        --role-session-name "transcript-uploader-$$" \
-        --region "$AWS_REGION" 2>/dev/null); then
-        log_error "Failed to assume role: $AWS_ASSUME_ROLE_ARN"
+    # Step 1: request a presigned upload URL
+    local response
+    if ! response=$(curl -sf -X POST "$request_url" 2>/dev/null); then
+        log_error "Failed to request upload URL for $file_name"
         return 1
     fi
 
-    export AWS_ACCESS_KEY_ID
-    export AWS_SECRET_ACCESS_KEY
-    export AWS_SESSION_TOKEN
-    AWS_ACCESS_KEY_ID=$(echo "$creds_json" | jq -r '.Credentials.AccessKeyId')
-    AWS_SECRET_ACCESS_KEY=$(echo "$creds_json" | jq -r '.Credentials.SecretAccessKey')
-    AWS_SESSION_TOKEN=$(echo "$creds_json" | jq -r '.Credentials.SessionToken')
+    local url method
+    url=$(echo "$response" | jq -r '.url // empty')
+    method=$(echo "$response" | jq -r '.method // "PUT"')
 
-    local expiration
-    expiration=$(echo "$creds_json" | jq -r '.Credentials.Expiration')
-    ROLE_CREDS_EXPIRES_AT=$(date -d "$expiration" +%s 2>/dev/null || echo 0)
-
-    log "Assumed role (expires at $expiration)"
-    return 0
-}
-
-build_s3_path() {
-    local suffix="$1"
-    if [[ -n "${AWS_S3_PATH_PREFIX:-}" ]]; then
-        echo "s3://${AWS_S3_BUCKET_NAME}/${AWS_S3_PATH_PREFIX}/${suffix}"
-    else
-        echo "s3://${AWS_S3_BUCKET_NAME}/${suffix}"
+    if [[ -z "$url" ]]; then
+        log_error "Upload URL response missing 'url' for $file_name"
+        return 1
     fi
+
+    # Step 2: upload the file contents to the presigned URL
+    if ! curl -sf -X "$method" --data-binary @"$file" \
+        -H "Content-Type: application/jsonl" "$url" 2>/dev/null; then
+        log_error "Failed to upload $file_name to presigned URL"
+        return 1
+    fi
+
+    return 0
 }
 
 upload_transcript() {
     local transcript_file="$1"
     local session_id
 
-    # Extract session ID from path (e.g., /root/.claude/projects/.../sessions/abc123.jsonl -> abc123)
+    # Extract session ID from path (e.g., /root/.claude/projects/.../abc123.jsonl -> abc123)
     session_id=$(basename "$transcript_file" .jsonl)
 
     if [[ -z "$session_id" ]]; then
@@ -102,27 +84,38 @@ upload_transcript() {
         return 1
     fi
 
-    local s3_dest
     # Upload main transcript
-    s3_dest=$(build_s3_path "${session_id}.jsonl")
-    if aws s3 cp "$transcript_file" "$s3_dest" --region "$AWS_REGION" 2>/dev/null; then
-        log "Uploaded $transcript_file -> $s3_dest"
+    local main_file_name="${session_id}.jsonl"
+    if [[ ! "$main_file_name" =~ $FILE_NAME_PATTERN ]]; then
+        log_error "Invalid transcript file name '$main_file_name', skipping"
+        return 1
+    fi
+
+    if upload_file "$transcript_file" "$session_id" "$main_file_name"; then
+        log "Uploaded $transcript_file (file_name=$main_file_name)"
     else
         log_error "Failed to upload $transcript_file"
         return 1
     fi
 
-    # Upload subagents if exists
-    local session_dir="${transcript_file%.jsonl}"
-    local subagents_dir="$session_dir/subagents"
+    # Upload subagent transcripts individually, if any
+    local subagents_dir="${transcript_file%.jsonl}/subagents"
 
     if [[ -d "$subagents_dir" ]]; then
-        s3_dest=$(build_s3_path "${session_id}/")
-        if aws s3 cp "$subagents_dir" "$s3_dest" --recursive --region "$AWS_REGION" 2>/dev/null; then
-            log "Uploaded subagents -> $s3_dest"
-        else
-            log_error "Failed to upload subagents for $session_id"
-        fi
+        local subagent_file file_name
+        for subagent_file in "$subagents_dir"/*.jsonl; do
+            [[ -e "$subagent_file" ]] || continue
+            file_name="subagents/$(basename "$subagent_file")"
+            if [[ ! "$file_name" =~ $FILE_NAME_PATTERN ]]; then
+                log_error "Invalid subagent file name '$file_name', skipping"
+                continue
+            fi
+            if upload_file "$subagent_file" "$session_id" "$file_name"; then
+                log "Uploaded subagent $subagent_file (file_name=$file_name)"
+            else
+                log_error "Failed to upload subagent $subagent_file"
+            fi
+        done
     fi
 }
 
@@ -150,37 +143,15 @@ main() {
     trap shutdown_handler SIGTERM
 
     # Check required environment variables
-    if [[ -z "${AWS_S3_BUCKET_NAME:-}" ]]; then
-        log_error "AWS_S3_BUCKET_NAME is not set"
+    if [[ -z "${TRANSCRIPT_UPLOAD_API_URL:-}" ]]; then
+        log_error "TRANSCRIPT_UPLOAD_API_URL is not set"
         exit 1
     fi
 
-    if [[ -z "${AWS_REGION:-}" ]]; then
-        log_error "AWS_REGION is not set"
-        exit 1
-    fi
-
-    if [[ -n "${AWS_ASSUME_ROLE_ARN:-}" ]]; then
-        log "Assuming role: ${AWS_ASSUME_ROLE_ARN}"
-        if ! assume_role; then
-            log_error "Failed to assume role at startup"
-            exit 1
-        fi
-    fi
-
-    if ! check_aws_credentials; then
-        exit 1
-    fi
-
-    if [[ -n "${AWS_S3_PATH_PREFIX:-}" ]]; then
-        log "S3 path prefix: ${AWS_S3_PATH_PREFIX}"
-    fi
-
-    log "AWS credentials verified. Watching for transcripts..."
+    log "Uploading transcripts to ${TRANSCRIPT_UPLOAD_API_URL%/}. Watching for transcripts..."
 
     # Main loop
     while [[ "$SHUTDOWN_REQUESTED" == "false" ]]; do
-        assume_role || log_error "Failed to refresh assumed role credentials"
         find_and_upload_transcripts
         # Use sleep with wait to allow signal handling
         sleep "$UPLOAD_INTERVAL" &
@@ -190,7 +161,6 @@ main() {
     done
 
     # Final upload before exit
-    assume_role || log_error "Failed to refresh assumed role credentials"
     find_and_upload_transcripts
     log "Shutdown complete"
 }
